@@ -31,7 +31,7 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **▶️ Resume Downloads** - Intelligent partial download recovery and continuation
 - **⏭️ Skip Existing Files** - Automatic detection and skipping of completed downloads
 
-### 🎯 **Progress Monitoring Like You've Never Seen**
+### 🎯 **Progress Monitoring**
 ```
 💾 introduction.mp4 ████████████████████████████ 100% 156.2MB • 12.3MB/s • Complete
 🔄 lesson-02.mp4 ████████████░░░░░░░░░░░░░░░░ 45% 89.1MB/198.4MB • 8.7MB/s • 0:00:12
@@ -113,14 +113,22 @@ COURSE_LINK=""              # Thinkific course URL
 COOKIE_DATA=""              # Browser cookies for authentication
 CLIENT_DATE=""              # Client date header
 
-# Optional
+# Optional - Performance
 VIDEO_DOWNLOAD_QUALITY="Original File" # Video quality (Original File,720p, 1080p, etc.)
-CONCURRENT_DOWNLOADS=2         # Number of parallel downloads
-RETRY_ATTEMPTS=3              # Number of retry attempts
-DOWNLOAD_DELAY=1              # Delay between downloads (seconds)
-OUTPUT_DIR=./downloads        # Download directory
-FFMPEG_PATH=ffmpeg           # FFmpeg executable path
-LOG_LEVEL=INFO               # Logging level (DEBUG, INFO, WARNING)
+CONCURRENT_DOWNLOADS=3       # Number of parallel downloads (1-10 recommended)
+RETRY_ATTEMPTS=3            # Number of retry attempts for failed downloads
+RATE_LIMIT_MB_S=0           # Rate limit in MB/s (0 = unlimited)
+DOWNLOAD_DELAY=1.0          # Delay between downloads (seconds)
+
+# Optional - Features
+VALIDATE_DOWNLOADS=true     # Enable file integrity validation
+RESUME_PARTIAL=true         # Enable resume for partial downloads
+DEBUG=false                 # Enable debug logging
+
+# Optional - System
+OUTPUT_DIR=./downloads      # Download directory
+FFMPEG_PRESENTATION_MERGE=false # Enable FFmpeg presentation merging
+LOG_LEVEL=INFO              # Logging level (DEBUG, INFO, WARNING)
 ```
 ```
 
@@ -150,9 +158,9 @@ docker-compose up
 │   │   ├── 🎥 welcome-video.mp4
 │   │   └── 📄 video-info.json
 │   └── 📁 02. Course Overview/
-│       ├── � course-overview.html
+│       ├── 📄 course-overview.html
 │       └── 📊 quiz-structure.json
-├── �📁 02. Getting Started/
+├── 📁 02. Getting Started/
 │   └── 📁 01. Setup Instructions/
 │       ├── 🎥 setup-instructions.mp4
 │       ├── 📄 setup-guide.pdf
