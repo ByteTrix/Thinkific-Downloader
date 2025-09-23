@@ -11,7 +11,7 @@ This package provides comprehensive functionality to download various content ty
 
 Features:
 - Modern Python package architecture
-- Rich terminal UI with progress tracking
+- progress tracking
 - Smart retry logic and error recovery
 - Resume support for interrupted downloads
 - Docker containerization with FFmpeg
