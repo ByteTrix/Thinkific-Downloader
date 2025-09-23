@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  thinkific-downloader-selective:
+    build: .
+    container_name: thinkific-downloader-selective
+    volumes:
+      - .:/app
+      - downloads:/app/downloads
+    working_dir: /app
+    environment:
+      - CLIENT_DATE=${CLIENT_DATE}
+      - COOKIE_DATA=${COOKIE_DATA}
+      - VIDEO_DOWNLOAD_QUALITY=${VIDEO_DOWNLOAD_QUALITY:-720p}
+      - COURSE_DATA_FILE=${COURSE_DATA_FILE}
+    command: python -m thinkific_downloader --json ${COURSE_DATA_FILE}
+
+volumes:
+  downloads:

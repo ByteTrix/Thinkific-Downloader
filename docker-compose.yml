@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  thinkific-downloader:
+    image: kvnxo/thinkific-downloader:latest
+    container_name: thinkific-downloader
+    volumes:
+      # Mount downloads directory to persist files
+      - ./downloads:/app/downloads
+      # Optional: mount .env file if you prefer that over environment variables
+      # - ./.env:/app/.env
+    working_dir: /app
+    env_file:
+      - .env  # This will load all environment variables from .env file
+    environment:
+      # These can override .env file values
+      - VIDEO_DOWNLOAD_QUALITY=${VIDEO_DOWNLOAD_QUALITY:-720p}
+    # Default command - can be overridden
+    command: python -m thinkific_downloader
+
+volumes:
+  downloads:
