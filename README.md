@@ -31,16 +31,14 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **▶️ Resume Downloads** - Intelligent partial download recovery and continuation
 - **⏭️ Skip Existing Files** - Automatic detection and skipping of completed downloads
 
-### � **Progress Monitoring Like You've Never Seen**
+### 🎯 **Progress Monitoring Like You've Never Seen**
 ```
-📚 Course Progress ████████████████████░░░░░░░░░░ 67% (15/23 lessons)
-
 💾 introduction.mp4 ████████████████████████████ 100% 156.2MB • 12.3MB/s • Complete
 🔄 lesson-02.mp4 ████████████░░░░░░░░░░░░░░░░ 45% 89.1MB/198.4MB • 8.7MB/s • 0:00:12
 ⏳ lesson-03.pdf ░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0% Queued
 ```
 
-### �️ **Reliability & Safety**
+### 🔒 **Reliability & Safety**
 - **🔄 Exponential Retry Logic** - Smart retry with jitter for failed downloads
 - **🚦 Rate Limiting** - Configurable bandwidth limiting to respect servers
 - **🔍 File Integrity Checks** - SHA256 checksums and size validation
@@ -80,7 +78,7 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **Error Recovery** - Graceful handling of network issues
 - **Validation** - File integrity checks and cleanup
 
-## � **Quick Start**
+## 🎯 **Quick Start**
 
 ### **🐳 Docker (Recommended)**
 
@@ -174,27 +172,6 @@ docker-compose up
 | **Web Content** | `.html` | Content extraction | Clean formatting |
 | **Presentations** | Multi-slide | FFmpeg merge | Combined video output |
 | **Quizzes** | `.json` | Structure export | Question/answer format |
-
-## 🎯 **Advanced Features**
-
-### **� Resume & Recovery**
-- Automatic detection of existing files
-- Skip completed downloads
-- Resume interrupted transfers
-- Validation of partial downloads
-
-### **📊 Progress Monitoring**
-```
-💾 introduction.mp4 ████████████████████████████ 100% 156.2MB • 12.3MB/s • Complete
-🔄 lesson-02.mp4 ████████████░░░░░░░░░░░░░░░░ 45% 89.1MB/198.4MB • 8.7MB/s • 0:00:12
-⏳ lesson-03.pdf ░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0% Queued
-```
-
-### **🧠 Smart Processing**
-- **File Naming**: Clean, descriptive filenames
-- **Content Detection**: Automatic type recognition  
-- **Quality Selection**: Best available quality
-- **Error Recovery**: Intelligent retry logic
 
 ## ❓ **FAQ**
 
