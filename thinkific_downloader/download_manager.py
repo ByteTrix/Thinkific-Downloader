@@ -12,6 +12,9 @@ from urllib3.util.retry import Retry
 from rich.progress import Progress, TaskID, TextColumn, BarColumn, TimeRemainingColumn, TransferSpeedColumn, DownloadColumn
 from rich.text import Text
 from rich.progress import ProgressColumn
+from rich.console import Console
+from .config import Settings
+from .file_utils import filter_filename
 
 class QueuedSpeedColumn(ProgressColumn):
     """Speed column that shows 'Queued' instead of unrealistic speeds"""
@@ -61,9 +64,6 @@ class QueuedTimeColumn(ProgressColumn):
             return Text(f"{hours:02d}:{minutes:02d}:{seconds:02d}", style="cyan")
         else:
             return Text(f"{minutes:02d}:{seconds:02d}", style="cyan")
-from rich.console import Console
-from .config import Settings
-from .file_utils import filter_filename
 
 
 class RateLimiter:
@@ -142,7 +142,13 @@ class DownloadSession:
 
     def get(self, url: str, **kwargs) -> requests.Response:
         """Make a GET request with the session."""
-        return self.session.get(url, timeout=60, **kwargs)
+        # Use longer timeout for streaming downloads
+        if kwargs.get('stream', False):
+            timeout = kwargs.get('timeout', (30, 300))  # 30s connect, 300s read
+        else:
+            timeout = kwargs.get('timeout', 60)
+        kwargs['timeout'] = timeout
+        return self.session.get(url, **kwargs)
 
     def close(self):
         """Close the session."""
@@ -250,8 +256,7 @@ class DownloadTask:
                                 print(f"Retry {attempt + 1}/{max_retries} to rename {self.temp_path} to {self.dest_path}: {e}")
                                 time.sleep(0.1)  # Brief delay before retry
                             else:
-                                if self.settings.debug:
-                                    print(f"Failed to rename temp file {self.temp_path} to {self.dest_path} after {max_retries} attempts: {e}")
+                                print(f"Failed to rename temp file {self.temp_path} to {self.dest_path} after {max_retries} attempts: {e}")
                                 # Restore backup if it exists
                                 if backup_path and backup_path.exists():
                                     try:
@@ -262,8 +267,7 @@ class DownloadTask:
 
                 # If temp file is not better, remove it and keep existing dest file
                 else:
-                    if self.settings.debug:
-                        print(f"ℹ️  Keeping existing file {self.dest_path.name} ({dest_size:,} bytes) - temp file is not significantly larger ({temp_size:,} bytes)")
+                    print(f"ℹ️  Keeping existing file {self.dest_path.name} ({dest_size:,} bytes) - temp file is not significantly larger ({temp_size:,} bytes)")
                     self.cleanup_temp_file()
                     return True
 
@@ -283,8 +287,7 @@ class DownloadTask:
                 for attempt in range(max_retries):
                     try:
                         self.temp_path.unlink()
-                        if self.settings.debug:
-                            print(f"🧹 Cleaned up temp file: {self.temp_path.name}")
+                        print(f"🧹 Cleaned up temp file: {self.temp_path.name}")
                         return
                     except Exception as e:
                         if attempt < max_retries - 1:
@@ -410,8 +413,7 @@ class DownloadManager:
                     resume_pos = task.temp_path.stat().st_size
                     if task.expected_size and resume_pos >= task.expected_size:
                         return self._validate_download(task)
-                    if show_progress:
-                        print(f"🔄 Resuming from temp file: {task.dest_path.name} ({resume_pos:,} bytes)")
+                    print(f"🔄 Resuming from temp file: {task.dest_path.name} ({resume_pos:,} bytes)")
 
                 # Check if final file exists for resume (fallback)
                 elif task.dest_path.exists():
@@ -422,8 +424,7 @@ class DownloadManager:
                     try:
                         task.dest_path.rename(task.temp_path)
                         resume_pos = task.temp_path.stat().st_size
-                        if show_progress:
-                            print(f"🔄 Preparing resume from existing file: {task.dest_path.name}")
+                        print(f"🔄 Preparing resume from existing file: {task.dest_path.name}")
                     except Exception as e:
                         if self.settings.debug:
                             print(f"Failed to prepare resume file: {e}")
@@ -434,7 +435,7 @@ class DownloadManager:
             if task.resume and resume_pos > 0:
                 headers['Range'] = f'bytes={resume_pos}-'
 
-            response = self.session.session.get(task.url, headers=headers, stream=True)
+            response = self.session.session.get(task.url, headers=headers, stream=True, timeout=(30, 300))
             response.raise_for_status()
 
             # Update progress bar with actual content length

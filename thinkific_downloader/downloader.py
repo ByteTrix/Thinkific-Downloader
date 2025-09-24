@@ -456,7 +456,8 @@ def init_course(data: Dict[str, Any]):
             
             if success_count is not None:
                 from .progress_manager import print_completion_summary
-                print_completion_summary(success_count, len(DOWNLOAD_TASKS), total_time)
+                failed_count = len(DOWNLOAD_TASKS) - success_count
+                print_completion_summary(success_count, failed_count, total_time)
             else:
                 print(f"[INFO] Download process completed in {total_time:.2f}s")
         else:
@@ -1204,7 +1205,8 @@ def chapterwise_download(content_ids: Iterable[Any]):
             total_time = time.time() - start_time
             
             if success_count is not None:
-                print_completion_summary(success_count, len(DOWNLOAD_TASKS), total_time)
+                failed_count = len(DOWNLOAD_TASKS) - success_count
+                print_completion_summary(success_count, failed_count, total_time)
             else:
                 print(f"[INFO] Download process completed in {total_time:.2f}s")
         else:
