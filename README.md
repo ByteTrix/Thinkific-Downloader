@@ -83,12 +83,14 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 
 **⚠️ Important**: Always clone or download the project first! The application needs access to the project directory for downloads, configuration files (.env), and proper functionality.
 
+**🔧 FIRST TIME USERS:** Before running the application, you MUST set up your environment variables. **[Follow our Complete Environment Setup Guide](ENV_SETUP.md)** for step-by-step instructions on extracting authentication data from your browser.
+
 ### **🐳 Docker (Recommended)**
 
 **Step 1: Get the Project**
 ```bash
 # Clone or download the project
-git clone https://github.com/itskavin/Thinkific-Downloader.git
+git clone https://github.com/ByteTrix/Thinkific-Downloader.git
 cd Thinkific-Downloader
 
 # Or download and extract ZIP, then navigate to project directory
@@ -96,10 +98,12 @@ cd Thinkific-Downloader
 
 **Step 2: Setup Environment**
 ```bash
-# Create your .env file (see configuration section below)
+# Create your .env file
 cp .env.example .env
-# Edit .env with your course details
+# Edit .env with your course details - See detailed guide below
 ```
+
+**📋 [Complete Environment Setup Guide](ENV_SETUP.md) ← Click here for step-by-step instructions**
 
 **Step 3: Run with Docker**
 ```bash
@@ -108,8 +112,8 @@ docker pull kvnxo/thinkific-downloader
 docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env kvnxo/thinkific-downloader
 
 # Option 2: GitHub Packages  
-docker pull ghcr.io/itskavin/thinkific-downloader
-docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env ghcr.io/itskavin/thinkific-downloader
+docker pull ghcr.io/bytetrix/thinkific-downloader
+docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env ghcr.io/bytetrix/thinkific-downloader
 
 # Option 3: Docker Compose (recommended)
 docker-compose up
@@ -119,13 +123,17 @@ docker-compose up
 
 ```bash
 # Step 1: Clone the project
-git clone https://github.com/itskavin/Thinkific-Downloader.git
+git clone https://github.com/ByteTrix/Thinkific-Downloader.git
 cd Thinkific-Downloader
 
 # Step 2: Install dependencies
 pip install -r requirements.txt
 
-# Step 3: Configure and run
+# Step 3: Configure environment
+cp .env.example .env
+# ⚠️ IMPORTANT: See ENV_SETUP.md for detailed configuration instructions
+
+# Step 4: Run the downloader
 # Update environment variables in .env file
 python thinkificdownloader.py
 ```
@@ -136,12 +144,12 @@ Get the latest source code:
 
 ```bash
 # Clone the repository
-git clone https://github.com/itskavin/Thinkific-Downloader.git
+git clone https://github.com/ByteTrix/Thinkific-Downloader.git
 cd Thinkific-Downloader
 
-# Setup and run with Docker
+# Setup environment variables
 cp .env.example .env
-# Edit .env with your course details
+# ⚠️ IMPORTANT: Follow the complete setup guide: ENV_SETUP.md
 docker-compose up
 
 # Or run with Python
@@ -160,6 +168,8 @@ python thinkificdownloader.py
 > 👨‍💻 **Developer?** Visit [**DEVELOPMENT.md**](DEVELOPMENT.md) for architecture overview, API reference, and contribution guidelines.
 
 ## ⚙️ **Enhanced Configuration**
+
+**🚨 BEFORE YOU START:** Follow our **[Complete Environment Setup Guide](ENV_SETUP.md)** for step-by-step instructions on extracting authentication data from your browser.
 
 Configure advanced features via environment variables or `.env` file:
 

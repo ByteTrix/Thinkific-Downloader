@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   release:
     name: 📦 Create Release
@@ -19,12 +23,10 @@ jobs:
       run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
     - name: 🎉 Create Release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.version.outputs.tag }}
-        release_name: 🚀 Release ${{ steps.version.outputs.tag }}
+        name: 🚀 Release ${{ steps.version.outputs.tag }}
         body: |
           ## 🎉 New Release: ${{ steps.version.outputs.tag }}
           
@@ -39,14 +41,14 @@ jobs:
           
           **GitHub Packages:**
           ```bash
-          docker pull ghcr.io/itskavin/thinkific-downloader:${{ steps.version.outputs.tag }}
+          docker pull ghcr.io/bytetrix/thinkific-downloader:${{ steps.version.outputs.tag }}
           # or  
-          docker pull ghcr.io/itskavin/thinkific-downloader:latest
+          docker pull ghcr.io/bytetrix/thinkific-downloader:latest
           ```
           
           **Setup and Run:**
           ```bash
-          git clone https://github.com/itskavin/Thinkific-Downloader.git
+          git clone https://github.com/ByteTrix/Thinkific-Downloader.git
           cd Thinkific-Downloader
           cp .env.example .env
           # Edit .env with your details
@@ -55,7 +57,7 @@ jobs:
           
           **Python Direct:**
           ```bash
-          git clone https://github.com/itskavin/Thinkific-Downloader.git
+          git clone https://github.com/ByteTrix/Thinkific-Downloader.git
           cd Thinkific-Downloader
           pip install -r requirements.txt
           python thinkificdownloader.py
@@ -83,7 +85,8 @@ jobs:
       id: version
       run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-    - name: 🔑 Login to Docker Hub
+    - name: 🔑 Login to Docker Hub (Optional)
+      continue-on-error: true
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -96,7 +99,8 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🔧 Build and Push to Docker Hub
+    - name: 🔧 Build and Push to Docker Hub (Optional)
+      continue-on-error: true
       run: |
         docker build -t kvnxo/thinkific-downloader:latest .
         docker build -t kvnxo/thinkific-downloader:${{ steps.version.outputs.tag }} .
