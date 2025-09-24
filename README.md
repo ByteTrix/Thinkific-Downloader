@@ -103,11 +103,15 @@ cp .env.example .env
 
 **Step 3: Run with Docker**
 ```bash
-# Pull latest image and run from project directory
+# Option 1: Docker Hub
 docker pull kvnxo/thinkific-downloader
 docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env kvnxo/thinkific-downloader
 
-# Or use docker-compose (recommended)
+# Option 2: GitHub Packages  
+docker pull ghcr.io/itskavin/thinkific-downloader
+docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env ghcr.io/itskavin/thinkific-downloader
+
+# Option 3: Docker Compose (recommended)
 docker-compose up
 ```
 
@@ -128,15 +132,22 @@ python thinkificdownloader.py
 
 ### **📦 Source Code Packages**
 
-Download source code packages from [GitHub Releases](https://github.com/itskavin/Thinkific-Downloader/releases):
+Get the latest source code:
 
-- **Windows**: `thinkific-downloader-vX.X.X-windows.zip`
-- **macOS**: `thinkific-downloader-vX.X.X-macos.tar.gz`
-- **Linux**: `thinkific-downloader-vX.X.X-linux.tar.gz`
+```bash
+# Clone the repository
+git clone https://github.com/itskavin/Thinkific-Downloader.git
+cd Thinkific-Downloader
 
-Each package includes setup scripts:
-- **Windows**: `setup-and-run.bat` (Python) or `run-docker.bat` (Docker)
-- **macOS/Linux**: `setup-and-run.sh` (Python) or `run-docker.sh` (Docker)
+# Setup and run with Docker
+cp .env.example .env
+# Edit .env with your course details
+docker-compose up
+
+# Or run with Python
+pip install -r requirements.txt
+python thinkificdownloader.py
+```
 
 > **Resume/Backup System:**
 > - Download status is tracked in `.download_status.json` (atomic, cross-platform)

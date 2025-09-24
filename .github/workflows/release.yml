@@ -1,138 +1,87 @@
-name: 🚀 Release & Package
+name: 🚀 Release
 
 on:
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g., v1.2.3)'
-        required: true
-        type: string
-
-env:
-  PYTHON_VERSION: '3.11'
-  DOCKER_IMAGE: kvnxo/thinkific-downloader
 
 jobs:
-  # ============================================================================
-  # Job 1: Create GitHub Release
-  # ============================================================================
-  create-release:
-    name: 📦 Create GitHub Release
+  release:
+    name: 📦 Create Release
     runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-      tag_name: ${{ steps.get_version.outputs.tag_name }}
     
     steps:
-    - name: 🏗️ Checkout code
+    - name: 🏗️ Checkout
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: 🏷️ Get version
-      id: get_version
-      run: |
-        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-          echo "tag_name=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-        else
-          echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-        fi
-
-    - name: 📝 Generate changelog
-      id: changelog
-      run: |
-        # Generate changelog from git commits since last tag
-        LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-        if [ -z "$LAST_TAG" ]; then
-          COMMITS=$(git log --pretty=format:"- %s (%h)" --reverse)
-        else
-          COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" --reverse)
-        fi
-        
-        # Create changelog
-        cat << EOF > CHANGELOG.md
-        ## 🎉 What's New in ${{ steps.get_version.outputs.tag_name }}
-        
-        ### 🚀 Features & Improvements
-        $COMMITS
-        
-        ### 📦 Installation Options
-        
-        #### 🐳 Docker (Recommended)
-        \`\`\`bash
-        # Clone the project
-        git clone https://github.com/itskavin/Thinkific-Downloader.git
-        cd Thinkific-Downloader
-        
-        # Setup and run
-        cp .env.example .env
-        # Edit .env with your course details
-        docker-compose up
-        \`\`\`
-        
-        #### 🐍 Python Direct
-        \`\`\`bash
-        # Download and extract the source code
-        # Or clone: git clone https://github.com/itskavin/Thinkific-Downloader.git
-        cd Thinkific-Downloader
-        
-        # Install and run
-        pip install -r requirements.txt
-        python thinkificdownloader.py
-        \`\`\`
-        
-        ### 🎯 Key Features
-        - ✅ **Downloads to ./downloads by default** - All course content organized in project directory
-        - ✅ **Enhanced Docker workflow** - Requires project directory for proper functionality
-        - ✅ **Parallel processing** - Download multiple files simultaneously
-        - ✅ **Smart resume** - Continue interrupted downloads automatically
-        - ✅ **File validation** - Integrity checks and corruption detection
-        - ✅ **Rich progress UI** - Beautiful terminal interface with real-time updates
-        
-        ### 📋 Requirements
-        - Python 3.8+ (for direct installation)
-        - Docker (for containerized usage)
-        - FFmpeg (optional, for presentation merging)
-        
-        ---
-        
-        **⚠️ Important**: Always clone or download the project first, then run Docker/Python from the project directory. The app needs access to the project folder for downloads, configuration, and proper functionality.
-        EOF
-        
-        # Set multiline output
-        echo "changelog<<EOF" >> $GITHUB_OUTPUT
-        cat CHANGELOG.md >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+      id: version
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
     - name: 🎉 Create Release
-      id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.get_version.outputs.tag_name }}
-        release_name: 🚀 Thinkific Downloader ${{ steps.get_version.outputs.tag_name }}
-        body: ${{ steps.changelog.outputs.changelog }}
+        tag_name: ${{ steps.version.outputs.tag }}
+        release_name: 🚀 Release ${{ steps.version.outputs.tag }}
+        body: |
+          ## 🎉 New Release: ${{ steps.version.outputs.tag }}
+          
+          ### 🚀 Installation Options
+          
+          **Docker Hub:**
+          ```bash
+          docker pull kvnxo/thinkific-downloader:${{ steps.version.outputs.tag }}
+          # or
+          docker pull kvnxo/thinkific-downloader:latest
+          ```
+          
+          **GitHub Packages:**
+          ```bash
+          docker pull ghcr.io/itskavin/thinkific-downloader:${{ steps.version.outputs.tag }}
+          # or  
+          docker pull ghcr.io/itskavin/thinkific-downloader:latest
+          ```
+          
+          **Setup and Run:**
+          ```bash
+          git clone https://github.com/itskavin/Thinkific-Downloader.git
+          cd Thinkific-Downloader
+          cp .env.example .env
+          # Edit .env with your details
+          docker-compose up
+          ```
+          
+          **Python Direct:**
+          ```bash
+          git clone https://github.com/itskavin/Thinkific-Downloader.git
+          cd Thinkific-Downloader
+          pip install -r requirements.txt
+          python thinkificdownloader.py
+          ```
+          
+          ### 🎯 Key Features
+          - Downloads to `./downloads/` by default
+          - Docker support for easy setup
+          - Parallel downloads
+          - Smart resume functionality
         draft: false
         prerelease: false
 
-  # ============================================================================
-  # Job 2: Build Docker Images
-  # ============================================================================
-  build-docker:
-    name: 🐳 Build & Push Docker Images
+  docker:
+    name: 🐳 Build Docker
     runs-on: ubuntu-latest
-    needs: create-release
+    needs: release
+    if: success()
     
     steps:
-    - name: 🏗️ Checkout code
+    - name: 🏗️ Checkout
       uses: actions/checkout@v4
 
-    - name: 🐳 Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: 🏷️ Get version
+      id: version
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
     - name: 🔑 Login to Docker Hub
       uses: docker/login-action@v3
@@ -140,358 +89,29 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: 🏷️ Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
+    - name: 🔑 Login to GitHub Container Registry
+      uses: docker/login-action@v3
       with:
-        images: ${{ env.DOCKER_IMAGE }}
-        tags: |
-          type=ref,event=tag
-          type=raw,value=latest
-          type=raw,value=${{ needs.create-release.outputs.tag_name }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 🚀 Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        platforms: linux/amd64,linux/arm64
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-  # ============================================================================
-  # Job 3: Create Platform-Specific Packages (Source Code)
-  # ============================================================================
-  build-packages:
-    name: 📦 Build Source Code Packages
-    runs-on: ${{ matrix.os }}
-    needs: create-release
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            platform: linux
-            ext: tar.gz
-          - os: windows-latest
-            platform: windows
-            ext: zip
-          - os: macos-latest
-            platform: macos
-            ext: tar.gz
-    
-    steps:
-    - name: 🏗️ Checkout code
-      uses: actions/checkout@v4
-
-    - name: � Create portable source package
-      shell: bash
+    - name: 🔧 Build and Push to Docker Hub
       run: |
-        # Create package directory
-        mkdir -p package/thinkific-downloader
-        
-        # Copy all necessary files
-        cp -r thinkific_downloader package/thinkific-downloader/
-        cp thinkificdownloader.py package/thinkific-downloader/
-        cp requirements.txt package/thinkific-downloader/
-        cp .env.example package/thinkific-downloader/
-        cp README.md package/thinkific-downloader/
-        cp SETUP.md package/thinkific-downloader/
-        cp LICENSE package/thinkific-downloader/
-        
-        # Copy Docker files if they exist
-        [ -f docker-compose.yml ] && cp docker-compose.yml package/thinkific-downloader/
-        [ -f Dockerfile ] && cp Dockerfile package/thinkific-downloader/
-        
-        # Create setup scripts for each platform
-        if [ "${{ matrix.platform }}" = "windows" ]; then
-          # Windows batch file
-          cat > package/thinkific-downloader/setup-and-run.bat << 'EOF'
-        @echo off
-        title Thinkific Downloader Setup
-        echo.
-        echo 🚀 Thinkific Downloader - Setup and Run
-        echo ========================================
-        echo.
-        
-        REM Check if .env exists
-        if not exist ".env" (
-            echo 📝 Creating .env file from template...
-            copy .env.example .env
-            echo.
-            echo ⚠️  IMPORTANT: Please edit the .env file with your course details!
-            echo    - Add your COURSE_LINK
-            echo    - Add your COOKIE_DATA
-            echo    - Add your CLIENT_DATE
-            echo.
-            echo 📖 See SETUP.md for detailed instructions on getting these values.
-            echo.
-            pause
-            echo.
-        )
-        
-        REM Check for Python
-        python --version >nul 2>&1
-        if %errorlevel% neq 0 (
-            echo ❌ Python is not installed or not in PATH
-            echo    Please install Python 3.8+ from https://python.org
-            pause
-            exit /b 1
-        )
-        
-        echo 📦 Installing dependencies...
-        pip install -r requirements.txt
-        if %errorlevel% neq 0 (
-            echo ❌ Failed to install dependencies
-            pause
-            exit /b 1
-        )
-        
-        echo.
-        echo 🎯 Starting Thinkific Downloader...
-        echo    Downloads will be saved to: ./downloads/
-        echo.
-        python thinkificdownloader.py
-        
-        echo.
-        echo 🎉 Download completed!
-        pause
-        EOF
-        
-          # Docker script for Windows
-          cat > package/thinkific-downloader/run-docker.bat << 'EOF'
-        @echo off
-        title Thinkific Downloader - Docker
-        echo.
-        echo 🐳 Thinkific Downloader - Docker Mode
-        echo ====================================
-        echo.
-        
-        REM Check if .env exists
-        if not exist ".env" (
-            echo 📝 Creating .env file from template...
-            copy .env.example .env
-            echo.
-            echo ⚠️  IMPORTANT: Please edit the .env file with your course details!
-            echo    See SETUP.md for detailed instructions.
-            echo.
-            pause
-            exit /b 1
-        )
-        
-        echo 🔄 Pulling latest Docker image...
-        docker pull kvnxo/thinkific-downloader:latest
-        
-        echo � Starting download with Docker...
-        echo    Downloads will be saved to: ./downloads/
-        echo.
-        docker run -it --rm -v "%cd%\downloads:/app/downloads" --env-file .env kvnxo/thinkific-downloader:latest
-        
-        echo.
-        echo 🎉 Download completed!
-        pause
-        EOF
-        
-        else
-          # Unix shell script
-          cat > package/thinkific-downloader/setup-and-run.sh << 'EOF'
-        #!/bin/bash
-        set -e
-        
-        echo "🚀 Thinkific Downloader - Setup and Run"
-        echo "========================================"
-        echo
-        
-        # Check if .env exists
-        if [ ! -f ".env" ]; then
-            echo "📝 Creating .env file from template..."
-            cp .env.example .env
-            echo
-            echo "⚠️  IMPORTANT: Please edit the .env file with your course details!"
-            echo "   - Add your COURSE_LINK"
-            echo "   - Add your COOKIE_DATA" 
-            echo "   - Add your CLIENT_DATE"
-            echo
-            echo "📖 See SETUP.md for detailed instructions on getting these values."
-            echo
-            echo "Edit the .env file now and run this script again."
-            exit 1
-        fi
-        
-        # Check for Python
-        if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
-            echo "❌ Python is not installed"
-            echo "   Please install Python 3.8+ from your package manager or https://python.org"
-            exit 1
-        fi
-        
-        # Use python3 if available, otherwise python
-        PYTHON_CMD="python3"
-        if ! command -v python3 &> /dev/null; then
-            PYTHON_CMD="python"
-        fi
-        
-        echo "📦 Installing dependencies..."
-        $PYTHON_CMD -m pip install -r requirements.txt
-        
-        echo
-        echo "🎯 Starting Thinkific Downloader..."
-        echo "   Downloads will be saved to: ./downloads/"
-        echo
-        $PYTHON_CMD thinkificdownloader.py
-        
-        echo
-        echo "🎉 Download completed!"
-        EOF
-          chmod +x package/thinkific-downloader/setup-and-run.sh
-          
-          # Docker script for Unix
-          cat > package/thinkific-downloader/run-docker.sh << 'EOF'
-        #!/bin/bash
-        set -e
-        
-        echo "🐳 Thinkific Downloader - Docker Mode"
-        echo "===================================="
-        echo
-        
-        # Check if .env exists
-        if [ ! -f ".env" ]; then
-            echo "📝 Creating .env file from template..."
-            cp .env.example .env
-            echo
-            echo "⚠️  IMPORTANT: Please edit the .env file with your course details!"
-            echo "   See SETUP.md for detailed instructions."
-            echo
-            echo "Edit the .env file now and run this script again."
-            exit 1
-        fi
-        
-        # Check for Docker
-        if ! command -v docker &> /dev/null; then
-            echo "❌ Docker is not installed"
-            echo "   Please install Docker from https://docker.com"
-            exit 1
-        fi
-        
-        echo "🔄 Pulling latest Docker image..."
-        docker pull kvnxo/thinkific-downloader:latest
-        
-        echo "� Starting download with Docker..."
-        echo "   Downloads will be saved to: ./downloads/"
-        echo
-        docker run -it --rm -v "$(pwd)/downloads:/app/downloads" --env-file .env kvnxo/thinkific-downloader:latest
-        
-        echo
-        echo "🎉 Download completed!"
-        EOF
-          chmod +x package/thinkific-downloader/run-docker.sh
-        fi
-        
-        # Create README for package
-        cat > package/thinkific-downloader/QUICK-START.md << 'EOF'
-        # 📥 Thinkific Downloader - Quick Start Guide
-        
-        ## 🚀 Quick Start Options
-        
-        ### Option 1: Docker (Recommended)
-        **Requirements**: Docker installed
-        
-        1. **Setup**: Edit `.env` file with your course details
-        2. **Run**: 
-           - **Windows**: Double-click `run-docker.bat`
-           - **Mac/Linux**: Run `./run-docker.sh`
-        
-        ### Option 2: Python Direct
-        **Requirements**: Python 3.8+ installed
-        
-        1. **Setup**: Edit `.env` file with your course details  
-        2. **Run**:
-           - **Windows**: Double-click `setup-and-run.bat`
-           - **Mac/Linux**: Run `./setup-and-run.sh`
-        
-        ## � Configuration Required
-        
-        **Before running**, edit the `.env` file with:
-        - `COURSE_LINK`: Your Thinkific course URL
-        - `COOKIE_DATA`: Browser session cookies
-        - `CLIENT_DATE`: Client date header
-        
-        See `SETUP.md` for detailed instructions on getting these values.
-        
-        ## 📁 Downloads Location
-        
-        All course content will be downloaded to `./downloads/` folder in this directory.
-        
-        ## 🆘 Need Help?
-        
-        - See `README.md` for complete features and documentation
-        - See `SETUP.md` for detailed setup instructions
-        - Visit: https://github.com/itskavin/Thinkific-Downloader
-        
-        ## 🎯 Key Features
-        
-        - ✅ Downloads to `./downloads/` by default
-        - ✅ Docker support for easy setup
-        - ✅ Parallel downloads for speed
-        - ✅ Smart resume for interrupted downloads
-        - ✅ File validation and integrity checks
-        EOF
+        docker build -t kvnxo/thinkific-downloader:latest .
+        docker build -t kvnxo/thinkific-downloader:${{ steps.version.outputs.tag }} .
+        docker push kvnxo/thinkific-downloader:latest
+        docker push kvnxo/thinkific-downloader:${{ steps.version.outputs.tag }}
 
-    - name: 📁 Create archive
-      shell: bash
+    - name: 📦 Build and Push to GitHub Packages
       run: |
-        cd package
-        if [ "${{ matrix.platform }}" = "windows" ]; then
-          # Use PowerShell on Windows for better ZIP creation
-          powershell -command "Compress-Archive -Path 'thinkific-downloader' -DestinationPath '../thinkific-downloader-${{ needs.create-release.outputs.tag_name }}-${{ matrix.platform }}.zip'"
-        else
-          tar -czf ../thinkific-downloader-${{ needs.create-release.outputs.tag_name }}-${{ matrix.platform }}.tar.gz thinkific-downloader
-        fi
-
-    - name: 📤 Upload package
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ./thinkific-downloader-${{ needs.create-release.outputs.tag_name }}-${{ matrix.platform }}.${{ matrix.ext }}
-        asset_name: thinkific-downloader-${{ needs.create-release.outputs.tag_name }}-${{ matrix.platform }}.${{ matrix.ext }}
-        asset_content_type: ${{ matrix.platform == 'windows' && 'application/zip' || 'application/gzip' }}
-
-  # ============================================================================
-  # Job 4: Update Documentation
-  # ============================================================================
-  update-docs:
-    name: 📚 Update Documentation
-    runs-on: ubuntu-latest
-    needs: [create-release, build-docker]
-    if: always() && needs.create-release.result == 'success'
-    
-    steps:
-    - name: 🏗️ Checkout code
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: 📝 Update Docker Hub description
-      run: |
-        echo "Docker image updated to ${{ needs.create-release.outputs.tag_name }}"
-        echo "This step would update Docker Hub description in a real scenario"
+        # Convert repository name to lowercase for GitHub Container Registry
+        REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
         
-    - name: 🎉 Summary
-      run: |
-        echo "🚀 Release ${{ needs.create-release.outputs.tag_name }} completed successfully!"
-        echo ""
-        echo "📦 Artifacts created:"
-        echo "  - GitHub Release with source code"
-        echo "  - Docker images (linux/amd64, linux/arm64)"
-        echo "  - Platform-specific source packages (Windows, macOS, Linux)"
-        echo ""
-        echo "🔗 Access your release at:"
-        echo "  https://github.com/itskavin/Thinkific-Downloader/releases/tag/${{ needs.create-release.outputs.tag_name }}"
-        echo ""
-        echo "🐳 Docker images available:"
-        echo "  docker pull kvnxo/thinkific-downloader:latest"
-        echo "  docker pull kvnxo/thinkific-downloader:${{ needs.create-release.outputs.tag_name }}"
+        # Build and tag for GitHub Container Registry
+        docker build -t ghcr.io/${REPO_LOWER}:latest .
+        docker build -t ghcr.io/${REPO_LOWER}:${{ steps.version.outputs.tag }} .
+        
+        # Push to GitHub Container Registry
+        docker push ghcr.io/${REPO_LOWER}:latest
+        docker push ghcr.io/${REPO_LOWER}:${{ steps.version.outputs.tag }}
