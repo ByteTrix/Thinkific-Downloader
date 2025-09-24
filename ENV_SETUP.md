@@ -2,7 +2,7 @@
 
 This guide will walk you through setting up the required environment variables to download courses from Thinkific-based platforms.
 
-## � **Reference Video (Optional)**
+## **Reference Video (Optional)**
 
 For a general overview of using browser DevTools to extract authentication data, you can watch this reference video: **[How to Extract Authentication Data from Browser](https://youtu.be/owi-cOcpceI?t=60)**
 
@@ -10,7 +10,7 @@ For a general overview of using browser DevTools to extract authentication data,
 
 ---
 
-## �📋 Prerequisites
+## Prerequisites
 
 - A web browser (Chrome, Firefox, Edge, Safari)
 - Access to the course you want to download
