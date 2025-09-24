@@ -6,6 +6,7 @@ from typing import Optional, List
 from pathlib import Path
 import os
 from .file_utils import filter_filename
+from .download_manager import DownloadManager
 # Local imports inside functions to avoid circular dependency during module import
 
 # Handles video proxy and wistia direct downloads
@@ -32,7 +33,11 @@ def video_downloader_wistia(wistia_id: str, file_name: Optional[str] = None, qua
     automatically decompressed by urllib. Falls back to selecting first asset if
     desired quality not present.
     """
-    from .downloader import download_file_chunked  # delayed import (avoid circular)
+    from .downloader import DOWNLOAD_MANAGER  # delayed import
+
+    if not DOWNLOAD_MANAGER:
+        from .downloader import init_settings
+        init_settings()
 
     json_url = WISTIA_JSON_URL.format(id=wistia_id)
 
@@ -132,7 +137,10 @@ def video_downloader_wistia(wistia_id: str, file_name: Optional[str] = None, qua
 
     if all_formats_flag:
         print(f"Downloading all available Wistia assets for {resolved_base}")
-        from .downloader import download_file_chunked  # local import inside to avoid circular earlier
+        from .downloader import DOWNLOAD_MANAGER  # local import inside to avoid circular earlier
+        if not DOWNLOAD_MANAGER:
+            from .downloader import init_settings
+            init_settings()
         seen: List[str] = []
         for asset in assets:
             a_url = asset.get('url')
@@ -151,7 +159,10 @@ def video_downloader_wistia(wistia_id: str, file_name: Optional[str] = None, qua
             if not out_name.endswith(ext):
                 out_name += ext
             print(f"Asset: {display} -> {a_url}")
-            download_file_chunked(a_url, filter_filename(out_name))
+            if DOWNLOAD_MANAGER:
+                DOWNLOAD_MANAGER.download_file(a_url, Path(filter_filename(out_name)))
+            else:
+                print("Download manager not initialized")
         return
 
     # Single quality path
@@ -177,4 +188,9 @@ def video_downloader_wistia(wistia_id: str, file_name: Optional[str] = None, qua
         ext = '.mp4'  # Default fallback
     resolved_name = resolved_base + (ext if not resolved_base.endswith(ext) else '')
     print(f"URL : {video_url}\nFile Name : {resolved_name}")
-    download_file_chunked(video_url, resolved_name)
+    
+    # Queue video for parallel download with absolute path to current directory
+    from .downloader import add_download_task
+    current_dir = Path.cwd()  # Capture current working directory
+    full_path = current_dir / resolved_name  # Create absolute path
+    add_download_task(video_url, full_path, "video")

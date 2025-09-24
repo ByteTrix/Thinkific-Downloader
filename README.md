@@ -30,13 +30,12 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **🧠 Smart File Validation** - Automatic integrity checking and corruption detection
 - **▶️ Resume Downloads** - Intelligent partial download recovery and continuation
 - **⏭️ Skip Existing Files** - Automatic detection and skipping of completed downloads
+- **💾 Atomic Resume/Backup System** - Cross-platform safe status tracking and backup (Windows, Mac, Linux)
 
 ### 🎯 **Progress Monitoring**
-```
-💾 introduction.mp4 ████████████████████████████ 100% 156.2MB • 12.3MB/s • Complete
-🔄 lesson-02.mp4 ████████████░░░░░░░░░░░░░░░░ 45% 89.1MB/198.4MB • 8.7MB/s • 0:00:12
-⏳ lesson-03.pdf ░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0% Queued
-```
+#### Example Progress UI
+
+![Progress UI](images/image.png)
 
 ### 🔒 **Reliability & Safety**
 - **🔄 Exponential Retry Logic** - Smart retry with jitter for failed downloads
@@ -69,6 +68,7 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **Rich Terminal Interface** - Beautiful progress bars and status updates
 - **Smart File Organization** - Logical folder structure with clean naming
 - **Resume Support** - Skip existing files, continue interrupted downloads
+- **Atomic Resume/Backup** - Status file is always safely backed up and updated, works on Windows, Mac, Linux
 - **Multiple Quality Options** - Choose video quality (720p, 1080p, etc.)
 - **Comprehensive Logging** - Debug mode for troubleshooting
 
@@ -77,27 +77,83 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **Session Management** - Proper authentication handling
 - **Error Recovery** - Graceful handling of network issues
 - **Validation** - File integrity checks and cleanup
+- **Atomic Status File** - Download status is always saved safely, with backup, for reliable resume
 
 ## 🎯 **Quick Start**
 
+**⚠️ Important**: Always clone or download the project first! The application needs access to the project directory for downloads, configuration files (.env), and proper functionality.
+
 ### **🐳 Docker (Recommended)**
 
+**Step 1: Get the Project**
 ```bash
+# Clone or download the project
+git clone https://github.com/itskavin/Thinkific-Downloader.git
+cd Thinkific-Downloader
+
+# Or download and extract ZIP, then navigate to project directory
+```
+
+**Step 2: Setup Environment**
+```bash
+# Create your .env file (see configuration section below)
+cp .env.example .env
+# Edit .env with your course details
+```
+
+**Step 3: Run with Docker**
+```bash
+# Option 1: Docker Hub
 docker pull kvnxo/thinkific-downloader
-docker run -it --rm -v $(pwd)/downloads:/app/downloads kvnxo/thinkific-downloader
+docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env kvnxo/thinkific-downloader
+
+# Option 2: GitHub Packages  
+docker pull ghcr.io/itskavin/thinkific-downloader
+docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env ghcr.io/itskavin/thinkific-downloader
+
+# Option 3: Docker Compose (recommended)
+docker-compose up
 ```
 
 ### **🐍 Python Direct**
 
 ```bash
+# Step 1: Clone the project
 git clone https://github.com/itskavin/Thinkific-Downloader.git
 cd Thinkific-Downloader
+
+# Step 2: Install dependencies
 pip install -r requirements.txt
 
-# Update environment variables in .env or export them directly
-python thinkidownloader3.py
-
+# Step 3: Configure and run
+# Update environment variables in .env file
+python thinkificdownloader.py
 ```
+
+### **📦 Source Code Packages**
+
+Get the latest source code:
+
+```bash
+# Clone the repository
+git clone https://github.com/itskavin/Thinkific-Downloader.git
+cd Thinkific-Downloader
+
+# Setup and run with Docker
+cp .env.example .env
+# Edit .env with your course details
+docker-compose up
+
+# Or run with Python
+pip install -r requirements.txt
+python thinkificdownloader.py
+```
+
+> **Resume/Backup System:**
+> - Download status is tracked in `.download_status.json` (atomic, cross-platform)
+> - A backup `.download_status.json.bak` is created automatically before each update
+> - If interrupted, simply rerun the downloader to resume from where you left off
+> - Works seamlessly on Windows, Mac, and Linux
 
 > 📖 **Need detailed setup instructions?** Check out our comprehensive [**SETUP.md**](SETUP.md) guide for step-by-step installation, troubleshooting, and configuration options.
 
@@ -108,27 +164,36 @@ python thinkidownloader3.py
 Configure advanced features via environment variables or `.env` file:
 
 ```bash
-# Required
+# ===============================================
+# REQUIRED AUTHENTICATION
+# ===============================================
 COURSE_LINK=""              # Thinkific course URL
 COOKIE_DATA=""              # Browser cookies for authentication
 CLIENT_DATE=""              # Client date header
 
-# Optional - Performance
-VIDEO_DOWNLOAD_QUALITY="Original File" # Video quality (Original File,720p, 1080p, etc.)
-CONCURRENT_DOWNLOADS=3       # Number of parallel downloads (1-10 recommended)
-RETRY_ATTEMPTS=3            # Number of retry attempts for failed downloads
-RATE_LIMIT_MB_S=0           # Rate limit in MB/s (0 = unlimited)
-DOWNLOAD_DELAY=1.0          # Delay between downloads (seconds)
+# ===============================================
+# BASIC SETTINGS
+# ===============================================
+VIDEO_DOWNLOAD_QUALITY="720p" # Video quality (Original File, 720p, 1080p, etc.)
+OUTPUT_DIR="./downloads"    # Download directory (defaults to ./downloads)
 
-# Optional - Features
+# ===============================================
+# ENHANCED FEATURES
+# ===============================================
+CONCURRENT_DOWNLOADS=3       # Number of parallel downloads (1-5 recommended)
+RETRY_ATTEMPTS=3            # Number of retry attempts for failed downloads
+DOWNLOAD_DELAY=1.0          # Delay between downloads (seconds)
+RATE_LIMIT_MB_S=            # Rate limit in MB/s (empty = unlimited)
+
+# Feature toggles
 VALIDATE_DOWNLOADS=true     # Enable file integrity validation
 RESUME_PARTIAL=true         # Enable resume for partial downloads
 DEBUG=false                 # Enable debug logging
 
-# Optional - System
-OUTPUT_DIR=./downloads      # Download directory
+# ===============================================
+# ADVANCED SETTINGS
+# ===============================================
 FFMPEG_PRESENTATION_MERGE=false # Enable FFmpeg presentation merging
-LOG_LEVEL=INFO              # Logging level (DEBUG, INFO, WARNING)
 ```
 ```
 
@@ -151,23 +216,28 @@ docker-compose up
 
 ## 📁 **Output Structure**
 
+**Default Location**: All courses are downloaded to `./downloads/` directory in your project folder.
+
 ```
-📁 Course Name/
-├── 📁 01. Introduction/
-│   ├── 📁 01. Welcome Video/
-│   │   ├── 🎥 welcome-video.mp4
-│   │   └── 📄 video-info.json
-│   └── 📁 02. Course Overview/
-│       ├── 📄 course-overview.html
-│       └── 📊 quiz-structure.json
-├── 📁 02. Getting Started/
-│   └── 📁 01. Setup Instructions/
-│       ├── 🎥 setup-instructions.mp4
-│       ├── 📄 setup-guide.pdf
-│       └── 🎨 presentation-slides.mp4
-├── 📄 course-metadata.json
-└── 📊 download-summary.json
+📁 downloads/
+└── 📁 Course Name/
+    ├── 📁 01. Introduction/
+    │   ├── 📁 01. Welcome Video/
+    │   │   ├── 🎥 welcome-video.mp4
+    │   │   └── 📄 video-info.json
+    │   └── 📁 02. Course Overview/
+    │       ├── 📄 course-overview.html
+    │       └── 📊 quiz-structure.json
+    ├── 📁 02. Getting Started/
+    │   └── 📁 01. Setup Instructions/
+    │       ├── 🎥 setup-instructions.mp4
+    │       ├── 📄 setup-guide.pdf
+    │       └── 🎨 presentation-slides.mp4
+    ├── 📄 course-metadata.json
+    └── 📊 download-summary.json
 ```
+
+**Customization**: Set `OUTPUT_DIR=./my-custom-path` in your `.env` file to change the download location.
 
 
 ### **Supported Content Types**
@@ -182,7 +252,22 @@ docker-compose up
 | **Quizzes** | `.json` | Structure export | Question/answer format |
 
 ## ❓ **FAQ**
+### **Resume/Backup System**
 
+**Q: How does resume work?**
+- The downloader automatically tracks download status in `.download_status.json`.
+- Before updating, a backup `.download_status.json.bak` is created (atomic, safe).
+- If interrupted, just rerun the downloader. It will resume partial downloads, skip completed files, and retry failed ones.
+- No manual intervention needed.
+
+**Q: Is it safe on Windows, Mac, Linux?**
+- Yes! The resume/backup system uses atomic file operations and works on all major platforms.
+
+**Q: Where is the status file stored?**
+- In the current working directory (where you run the downloader).
+
+**Q: Can I delete the status file?**
+- Yes, but you will lose resume progress. The backup file is for safety only.
 ### **🔐 Authentication & Setup**
 
 **Q: How do I get the required authentication data?**

@@ -1,0 +1,43 @@
+name: 🧪 CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: 🧪 Basic Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗️ Checkout
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: 📦 Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: 🧪 Test imports
+      run: |
+        python -c "import thinkific_downloader; print('✅ Package imports work')"
+        python -c "from thinkific_downloader.config import Settings; print('✅ Config works')"
+
+  docker:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗️ Checkout
+      uses: actions/checkout@v4
+
+    - name: 🐳 Build Docker image
+      run: |
+        docker build -t thinkific-downloader:test .
+        echo "✅ Docker image builds successfully"

@@ -62,13 +62,15 @@ graph TB
   - Retry logic with exponential backoff
   - Resource management
 
-#### **4. File Validator** (`file_validator.py`)
-- **Purpose**: Smart file validation and skip logic
+
+#### **4. Resume Tracker** (`resume_tracker.py`)
+- **Purpose**: Atomic, cross-platform resume and status tracking
 - **Features**:
-  - File integrity checking (size, checksums)
-  - Resume detection and validation
-  - Download metadata persistence
-  - Smart skip decisions
+    - Download status tracking and backup (Windows, Mac, Linux)
+    - File integrity checking (size, checksums)
+    - Resume detection and validation
+    - Download metadata persistence
+    - Smart skip decisions
 
 #### **5. Content Processors**
 - **Wistia Downloader** (`wistia_downloader.py`): Video processing
@@ -179,7 +181,7 @@ graph TD
 3. **Course Processing**: API calls → Content parsing → Task creation
 4. **Download Orchestration**: Task queue → `download_manager.py` → Parallel workers
 5. **Progress Tracking**: Thread-safe updates → `progress_manager.py` → Rich UI
-6. **Validation**: File checks → `file_validator.py` → Skip decisions
+6. **Validation**: File checks → `resume_tracker.py` → Skip decisions
 
 ---
 
@@ -286,7 +288,7 @@ tests/
 ├── unit/
 │   ├── test_progress_manager.py
 │   ├── test_download_manager.py
-│   ├── test_file_validator.py
+│   ├── test_resume_tracker.py
 │   └── test_enhanced_downloader.py
 ├── integration/
 │   ├── test_full_download.py
@@ -339,6 +341,18 @@ class TestProgressManager:
         # Assert
         assert file_id in progress_manager.downloads
         assert download.filename == filename
+
+    def test_resume_tracker_atomic_save(self):
+        from thinkific_downloader.resume_tracker import ResumeTracker
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            status_file = Path(tmpdir) / ".download_status.json"
+            tracker = ResumeTracker(str(status_file))
+            tracker.status_data["test"] = {"status": "completed"}
+            tracker._save_status()
+            assert status_file.exists()
+            backup_file = status_file.with_suffix('.json.bak')
+            assert backup_file.exists()
         
     @patch('thinkific_downloader.progress_manager.time.time')
     def test_calculate_download_speed(self, mock_time, progress_manager):

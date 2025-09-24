@@ -11,7 +11,6 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/
 eggs/
 .eggs/
 lib/
@@ -94,3 +93,4 @@ ffmpeg.log
 .docker/
 docker-volumes/
 *.pid
+thinkific-launch-accelerator-course-october-2025/.download_status.json.bak

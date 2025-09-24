@@ -36,88 +36,38 @@ This comprehensive guide walks you through installing and configuring Thinkific-
 
 ## 🚀 Installation Methods
 
-### **Method 1: Docker (Recommended - Easiest)**
+### **📦 Option 1: Clone Repository (Recommended)**
 
-Docker provides the most consistent and hassle-free experience with all dependencies pre-installed.
+Get the latest version directly from GitHub:
 
-#### **1.1 Install Docker**
-- **Windows/Mac**: Download [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- **Linux**: Follow [Docker installation guide](https://docs.docker.com/engine/install/)
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/itskavin/Thinkific-Downloader.git
+   cd Thinkific-Downloader
+   ```
 
-#### **1.2 Pull and Run**
-```bash
-# Pull the latest image
-docker pull kvnxo/thinkific-downloader:latest
-
-# Run with basic setup
-docker run -it --rm \
-  -v $(pwd)/downloads:/app/downloads \
-  -e COURSE_LINK="YOUR_COURSE_URL" \
-  -e COOKIE_DATA="YOUR_COOKIES" \
-  -e CLIENT_DATE="YOUR_CLIENT_DATE" \
-  kvnxo/thinkific-downloader:latest
-```
-
-#### **1.3 Docker Compose (Recommended)**
-Create `docker-compose.yml`:
-```yaml
-version: '3.8'
-services:
-  thinkific-downloader:
-    image: kvnxo/thinkific-downloader:latest
-    volumes:
-      - ./downloads:/app/downloads
-      - ./.env:/app/.env
-    environment:
-      - COURSE_LINK=${COURSE_LINK}
-      - COOKIE_DATA=${COOKIE_DATA}
-      - CLIENT_DATE=${CLIENT_DATE}
-      # Enhanced features
-      - CONCURRENT_DOWNLOADS=3
-      - RETRY_ATTEMPTS=3
-```
-
-Run with: `docker-compose up`
+2. **Setup configuration**:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your course details (see Authentication Setup below)
+   ```
+   
+3. **Run with Docker** (Recommended):
+   ```bash
+   docker-compose up
+   ```
+   
+   **Or run with Python**:
+   ```bash
+   pip install -r requirements.txt
+   python thinkificdownloader.py
+   ```
 
 ---
 
-### **Method 2: Python Package Installation**
+### **🐳 Option 2: Docker Only**
 
-For users who prefer native Python installation with full control.
-
-#### **2.1 Clone Repository**
-```bash
-# Clone the repository
-git clone https://github.com/itskavin/Thinkific-Downloader.git
-cd Thinkific-Downloader
-```
-
-#### **2.2 Quick Setup (Automated)**
-```bash
-# Run the automated installer
-python install.py
-```
-
-#### **2.3 Manual Installation**
-```bash
-# Create virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate  # Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install in development mode
-pip install -e .
-```
-
-#### **2.4 Verify Installation**
-```bash
-# Test the installation
-python -m thinkific_downloader --help
-```
+If you want to use Docker without cloning:
 
 ---
 
@@ -204,6 +154,10 @@ VALIDATE_DOWNLOADS=true
 # Resume Partial Downloads (true/false)
 RESUME_PARTIAL=true
 
+# Atomic Resume/Backup System (always enabled)
+# Download status is tracked in .download_status.json (atomic, cross-platform)
+# A backup .download_status.json.bak is created automatically before each update
+
 # Debug Mode (true/false)
 DEBUG=false
 
@@ -279,6 +233,15 @@ docker run -it --rm \
 🚀 Initializing enhanced course processing...
 
 📚 Course: Your Course Name | Progress: 0.0% (0/25 files) | Speed: 0.0 MB/s | ETA: Unknown
+
+📊 Resume Status Summary
+  ✅ 5 files already completed
+  📥 2 files partially downloaded (will resume)
+  ❌ 1 files previously failed (will retry)
+
+📁 Files to download: 31
+🔄 Parallel workers: 3
+⚡ Enhanced features: Rate limiting, Resume, Validation
 
 🎥 introduction.mp4 ████████████████████████████ 100% 156.2MB • 12.3MB/s • Complete
 🔄 lesson-02.mp4 ████████████░░░░░░░░░░░░░░░░ 45% 89.1MB/198.4MB • 8.7MB/s • 0:00:12
@@ -535,6 +498,23 @@ After setup, verify everything works:
 ```bash
 # Should show course info without downloading
 python -c "from thinkific_downloader.config import Settings; s=Settings.from_env(); print(f'✅ Auth OK for {s.client_date[:20]}...')"
+
+## Resume/Backup System
+
+**How does resume work?**
+- The downloader automatically tracks download status in `.download_status.json`.
+- Before updating, a backup `.download_status.json.bak` is created (atomic, safe).
+- If interrupted, just rerun the downloader. It will resume partial downloads, skip completed files, and retry failed ones.
+- No manual intervention needed.
+
+**Is it safe on Windows, Mac, Linux?**
+- Yes! The resume/backup system uses atomic file operations and works on all major platforms.
+
+**Where is the status file stored?**
+- In the current working directory (where you run the downloader).
+
+**Can I delete the status file?**
+- Yes, but you will lose resume progress. The backup file is for safety only.
 ```
 
 ### **2. Test Network Connection**
