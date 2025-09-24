@@ -18,6 +18,6 @@ Features:
 - Configurable quality and performance settings
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "Community Contributors"
 __description__ = "A modern Python utility to download courses from Thinkific-based platforms"
