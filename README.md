@@ -81,24 +81,62 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 
 ## 🎯 **Quick Start**
 
+**⚠️ Important**: Always clone or download the project first! The application needs access to the project directory for downloads, configuration files (.env), and proper functionality.
+
 ### **🐳 Docker (Recommended)**
 
+**Step 1: Get the Project**
 ```bash
+# Clone or download the project
+git clone https://github.com/itskavin/Thinkific-Downloader.git
+cd Thinkific-Downloader
+
+# Or download and extract ZIP, then navigate to project directory
+```
+
+**Step 2: Setup Environment**
+```bash
+# Create your .env file (see configuration section below)
+cp .env.example .env
+# Edit .env with your course details
+```
+
+**Step 3: Run with Docker**
+```bash
+# Pull latest image and run from project directory
 docker pull kvnxo/thinkific-downloader
-docker run -it --rm -v $(pwd)/downloads:/app/downloads kvnxo/thinkific-downloader
+docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env kvnxo/thinkific-downloader
+
+# Or use docker-compose (recommended)
+docker-compose up
 ```
 
 ### **🐍 Python Direct**
 
 ```bash
+# Step 1: Clone the project
 git clone https://github.com/itskavin/Thinkific-Downloader.git
 cd Thinkific-Downloader
+
+# Step 2: Install dependencies
 pip install -r requirements.txt
 
-# Update environment variables in .env or export them directly
-python thinkidownloader3.py
-
+# Step 3: Configure and run
+# Update environment variables in .env file
+python thinkificdownloader.py
 ```
+
+### **📦 Source Code Packages**
+
+Download source code packages from [GitHub Releases](https://github.com/itskavin/Thinkific-Downloader/releases):
+
+- **Windows**: `thinkific-downloader-vX.X.X-windows.zip`
+- **macOS**: `thinkific-downloader-vX.X.X-macos.tar.gz`
+- **Linux**: `thinkific-downloader-vX.X.X-linux.tar.gz`
+
+Each package includes setup scripts:
+- **Windows**: `setup-and-run.bat` (Python) or `run-docker.bat` (Docker)
+- **macOS/Linux**: `setup-and-run.sh` (Python) or `run-docker.sh` (Docker)
 
 > **Resume/Backup System:**
 > - Download status is tracked in `.download_status.json` (atomic, cross-platform)
@@ -115,27 +153,36 @@ python thinkidownloader3.py
 Configure advanced features via environment variables or `.env` file:
 
 ```bash
-# Required
+# ===============================================
+# REQUIRED AUTHENTICATION
+# ===============================================
 COURSE_LINK=""              # Thinkific course URL
 COOKIE_DATA=""              # Browser cookies for authentication
 CLIENT_DATE=""              # Client date header
 
-# Optional - Performance
-VIDEO_DOWNLOAD_QUALITY="Original File" # Video quality (Original File,720p, 1080p, etc.)
-CONCURRENT_DOWNLOADS=3       # Number of parallel downloads (1-10 recommended)
-RETRY_ATTEMPTS=3            # Number of retry attempts for failed downloads
-RATE_LIMIT_MB_S=0           # Rate limit in MB/s (0 = unlimited)
-DOWNLOAD_DELAY=1.0          # Delay between downloads (seconds)
+# ===============================================
+# BASIC SETTINGS
+# ===============================================
+VIDEO_DOWNLOAD_QUALITY="720p" # Video quality (Original File, 720p, 1080p, etc.)
+OUTPUT_DIR="./downloads"    # Download directory (defaults to ./downloads)
 
-# Optional - Features
+# ===============================================
+# ENHANCED FEATURES
+# ===============================================
+CONCURRENT_DOWNLOADS=3       # Number of parallel downloads (1-5 recommended)
+RETRY_ATTEMPTS=3            # Number of retry attempts for failed downloads
+DOWNLOAD_DELAY=1.0          # Delay between downloads (seconds)
+RATE_LIMIT_MB_S=            # Rate limit in MB/s (empty = unlimited)
+
+# Feature toggles
 VALIDATE_DOWNLOADS=true     # Enable file integrity validation
 RESUME_PARTIAL=true         # Enable resume for partial downloads
 DEBUG=false                 # Enable debug logging
 
-# Optional - System
-OUTPUT_DIR=./downloads      # Download directory
+# ===============================================
+# ADVANCED SETTINGS
+# ===============================================
 FFMPEG_PRESENTATION_MERGE=false # Enable FFmpeg presentation merging
-LOG_LEVEL=INFO              # Logging level (DEBUG, INFO, WARNING)
 ```
 ```
 
@@ -158,23 +205,28 @@ docker-compose up
 
 ## 📁 **Output Structure**
 
+**Default Location**: All courses are downloaded to `./downloads/` directory in your project folder.
+
 ```
-📁 Course Name/
-├── 📁 01. Introduction/
-│   ├── 📁 01. Welcome Video/
-│   │   ├── 🎥 welcome-video.mp4
-│   │   └── 📄 video-info.json
-│   └── 📁 02. Course Overview/
-│       ├── 📄 course-overview.html
-│       └── 📊 quiz-structure.json
-├── 📁 02. Getting Started/
-│   └── 📁 01. Setup Instructions/
-│       ├── 🎥 setup-instructions.mp4
-│       ├── 📄 setup-guide.pdf
-│       └── 🎨 presentation-slides.mp4
-├── 📄 course-metadata.json
-└── 📊 download-summary.json
+📁 downloads/
+└── 📁 Course Name/
+    ├── 📁 01. Introduction/
+    │   ├── 📁 01. Welcome Video/
+    │   │   ├── 🎥 welcome-video.mp4
+    │   │   └── 📄 video-info.json
+    │   └── 📁 02. Course Overview/
+    │       ├── 📄 course-overview.html
+    │       └── 📊 quiz-structure.json
+    ├── 📁 02. Getting Started/
+    │   └── 📁 01. Setup Instructions/
+    │       ├── 🎥 setup-instructions.mp4
+    │       ├── 📄 setup-guide.pdf
+    │       └── 🎨 presentation-slides.mp4
+    ├── 📄 course-metadata.json
+    └── 📊 download-summary.json
 ```
+
+**Customization**: Set `OUTPUT_DIR=./my-custom-path` in your `.env` file to change the download location.
 
 
 ### **Supported Content Types**

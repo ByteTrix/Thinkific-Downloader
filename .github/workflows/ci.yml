@@ -1,0 +1,335 @@
+name: 🧪 CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, multi-dwl ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ============================================================================
+  # Job 1: Code Quality & Testing
+  # ============================================================================
+  test:
+    name: 🧪 Test & Quality Check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        exclude:
+          # Reduce matrix size - test all Python versions only on Ubuntu
+          - os: windows-latest
+            python-version: '3.8'
+          - os: windows-latest
+            python-version: '3.9'
+          - os: windows-latest
+            python-version: '3.10'
+          - os: macos-latest
+            python-version: '3.8'
+          - os: macos-latest
+            python-version: '3.9'
+          - os: macos-latest
+            python-version: '3.10'
+    
+    steps:
+    - name: 🏗️ Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov flake8 black isort
+
+    - name: 🎨 Code formatting check
+      run: |
+        black --check --diff .
+        isort --check-only --diff .
+
+    - name: 🔍 Lint check
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: 🧪 Run basic import tests
+      run: |
+        python -c "import thinkific_downloader; print('✅ Package imports successfully')"
+        python -c "from thinkific_downloader.config import Settings; print('✅ Config module works')"
+        python -c "from thinkific_downloader.downloader import main; print('✅ Main module works')"
+
+    - name: 🔧 Test .env handling
+      run: |
+        # Test that config handles missing .env gracefully
+        python -c "
+        import os
+        from thinkific_downloader.config import load_env
+        from pathlib import Path
+        
+        # Test with non-existent .env file
+        non_existent = Path('non_existent.env')
+        try:
+            load_env(non_existent)
+            print('✅ Handles missing .env file gracefully')
+        except Exception as e:
+            print(f'❌ Error handling missing .env: {e}')
+            exit(1)
+        "
+
+    - name: 📊 Test environment variable parsing
+      run: |
+        python -c "
+        import os
+        from thinkific_downloader.config import Settings
+        
+        # Set test environment variables
+        os.environ['CLIENT_DATE'] = 'test-date'
+        os.environ['COOKIE_DATA'] = 'test-cookie'
+        os.environ['OUTPUT_DIR'] = './test-downloads'
+        os.environ['CONCURRENT_DOWNLOADS'] = '5'
+        os.environ['DEBUG'] = 'true'
+        
+        try:
+            settings = Settings.from_env()
+            assert settings.output_dir == './test-downloads'
+            assert settings.concurrent_downloads == 5
+            assert settings.debug == True
+            print('✅ Environment variable parsing works correctly')
+        except SystemExit:
+            # Expected when required vars are set
+            print('✅ Environment validation works')
+        except Exception as e:
+            print(f'❌ Error in environment parsing: {e}')
+            exit(1)
+        "
+
+  # ============================================================================
+  # Job 2: Docker Build Test
+  # ============================================================================
+  docker-test:
+    name: 🐳 Docker Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗️ Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🔨 Build Docker image (test)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: thinkific-downloader:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: 🧪 Test Docker image
+      run: |
+        # Test that the image starts without errors (with minimal config)
+        echo "Testing Docker image startup..."
+        docker run --rm thinkific-downloader:test python -c "
+        try:
+            import thinkific_downloader
+            print('✅ Docker image: Package imports successfully')
+        except Exception as e:
+            print(f'❌ Docker image: Import failed: {e}')
+            exit(1)
+        "
+
+  # ============================================================================
+  # Job 3: Project Structure Validation
+  # ============================================================================
+  structure-test:
+    name: 📦 Project Structure Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗️ Checkout code
+      uses: actions/checkout@v4
+
+    - name: � Validate project structure
+      run: |
+        echo "📁 Checking project structure..."
+        
+        # Check essential files exist
+        files_to_check=(
+          "thinkific_downloader/__init__.py"
+          "thinkific_downloader/config.py"
+          "thinkific_downloader/downloader.py"
+          "thinkific_downloader/download_manager.py"
+          "README.md"
+          "SETUP.md"
+          "requirements.txt"
+          ".env.example"
+          "Dockerfile"
+          "docker-compose.yml"
+        )
+        
+        for file in "${files_to_check[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ $file is missing"
+            exit 1
+          fi
+        done
+        
+        echo "✅ All essential files present"
+
+    - name: 🔧 Test environment configuration
+      run: |
+        echo "🧪 Testing .env.example structure..."
+        
+        # Check for required sections
+        required_vars=(
+          "COURSE_LINK"
+          "COOKIE_DATA"
+          "CLIENT_DATE"
+          "OUTPUT_DIR"
+          "CONCURRENT_DOWNLOADS"
+        )
+        
+        for var in "${required_vars[@]}"; do
+          if grep -q "$var" .env.example; then
+            echo "✅ .env.example contains $var"
+          else
+            echo "❌ .env.example missing $var"
+            exit 1
+          fi
+        done
+        
+        echo "✅ .env.example structure is valid"
+
+  # ============================================================================
+  # Job 4: Security & Vulnerability Check
+  # ============================================================================
+  security:
+    name: 🔒 Security Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗️ Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 🔒 Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+
+    - name: 🧪 Check dependencies for vulnerabilities
+      run: |
+        safety check -r requirements.txt
+
+    - name: 🔍 Run static security analysis
+      run: |
+        bandit -r thinkific_downloader/ -f json -o bandit-report.json
+        bandit -r thinkific_downloader/
+
+  # ============================================================================
+  # Job 5: Documentation Check
+  # ============================================================================
+  docs-check:
+    name: 📚 Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗️ Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📖 Check README structure
+      run: |
+        echo "📋 Checking documentation completeness..."
+        
+        # Check that essential sections exist in README
+        required_sections=(
+          "Quick Start"
+          "Docker"
+          "Configuration"
+          "Features"
+        )
+        
+        for section in "${required_sections[@]}"; do
+          if grep -qi "$section" README.md; then
+            echo "✅ README contains '$section' section"
+          else
+            echo "⚠️  README missing '$section' section"
+          fi
+        done
+        
+        # Check .env.example is properly structured
+        if [ -f ".env.example" ]; then
+          echo "✅ .env.example file exists"
+          
+          # Check for required sections
+          if grep -q "COURSE_LINK" .env.example && grep -q "COOKIE_DATA" .env.example; then
+            echo "✅ .env.example contains required authentication variables"
+          else
+            echo "❌ .env.example missing required authentication variables"
+            exit 1
+          fi
+          
+          if grep -q "OUTPUT_DIR" .env.example; then
+            echo "✅ .env.example contains OUTPUT_DIR configuration"
+          else
+            echo "❌ .env.example missing OUTPUT_DIR configuration"
+            exit 1
+          fi
+        else
+          echo "❌ .env.example file is missing"
+          exit 1
+        fi
+        
+        echo "✅ Documentation check passed"
+
+  # ============================================================================
+  # Job 6: Summary
+  # ============================================================================
+  summary:
+    name: 📊 CI Summary
+    runs-on: ubuntu-latest
+    needs: [test, docker-test, structure-test, security, docs-check]
+    if: always()
+    
+    steps:
+    - name: 🎉 Success Summary
+      if: needs.test.result == 'success' && needs.docker-test.result == 'success' && needs.structure-test.result == 'success' && needs.security.result == 'success' && needs.docs-check.result == 'success'
+      run: |
+        echo "🎉 All CI checks passed successfully!"
+        echo ""
+        echo "✅ Code quality and testing"
+        echo "✅ Docker build verification" 
+        echo "✅ Project structure validation"
+        echo "✅ Security vulnerability checks"
+        echo "✅ Documentation completeness"
+        echo ""
+        echo "🚀 Ready for merge/release!"
+
+    - name: ❌ Failure Summary
+      if: needs.test.result == 'failure' || needs.docker-test.result == 'failure' || needs.structure-test.result == 'failure' || needs.security.result == 'failure' || needs.docs-check.result == 'failure'
+      run: |
+        echo "❌ Some CI checks failed:"
+        echo ""
+        echo "🧪 Tests: ${{ needs.test.result }}"
+        echo "🐳 Docker: ${{ needs.docker-test.result }}"
+        echo "📦 Structure: ${{ needs.structure-test.result }}"
+        echo "🔒 Security: ${{ needs.security.result }}"
+        echo "📚 Docs: ${{ needs.docs-check.result }}"
+        echo ""
+        echo "🔧 Please review and fix failing checks before merging."
+        exit 1

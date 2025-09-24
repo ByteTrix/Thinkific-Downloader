@@ -252,7 +252,13 @@ def init_course(data: Dict[str, Any]):
     course_name = filter_filename(data['course']['name'])
     prev_dir = Path.cwd()
     ROOT_PROJECT_DIR = prev_dir
-    course_dir = Path(course_name)
+    
+    # Use output_dir from settings, create it if it doesn't exist
+    output_dir = Path(SETTINGS.output_dir if SETTINGS else './downloads')
+    output_dir.mkdir(exist_ok=True, parents=True)
+    
+    # Create course directory inside the output directory
+    course_dir = output_dir / course_name
     course_dir.mkdir(exist_ok=True)
     os.chdir(course_dir)
     COURSE_CONTENTS = data['contents']

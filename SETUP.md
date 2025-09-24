@@ -36,30 +36,75 @@ This comprehensive guide walks you through installing and configuring Thinkific-
 
 ## 🚀 Installation Methods
 
-### **Method 1: Docker (Recommended - Easiest)**
+### **📦 Option 1: Source Code Packages (Easiest)**
+
+Download ready-to-use source packages from [GitHub Releases](https://github.com/itskavin/Thinkific-Downloader/releases):
+
+1. **Download** the package for your operating system:
+   - **Windows**: `thinkific-downloader-vX.X.X-windows.zip`
+   - **macOS**: `thinkific-downloader-vX.X.X-macos.tar.gz` 
+   - **Linux**: `thinkific-downloader-vX.X.X-linux.tar.gz`
+
+2. **Extract** the downloaded package to your desired location
+
+3. **Setup** your configuration:
+   - Edit the `.env` file with your course details (see Authentication Setup below)
+   
+4. **Run** the application:
+   - **Docker Mode** (Recommended):
+     - **Windows**: Double-click `run-docker.bat`
+     - **macOS/Linux**: Run `./run-docker.sh`
+   - **Python Mode**:
+     - **Windows**: Double-click `setup-and-run.bat` 
+     - **macOS/Linux**: Run `./setup-and-run.sh`
+
+---
+
+### **🐳 Option 2: Docker (Recommended for Advanced Users)**
 
 Docker provides the most consistent and hassle-free experience with all dependencies pre-installed.
 
-#### **1.1 Install Docker**
+#### **2.1 Install Docker**
 - **Windows/Mac**: Download [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - **Linux**: Follow [Docker installation guide](https://docs.docker.com/engine/install/)
 
-#### **1.2 Pull and Run**
+#### **2.2 Get the Project**
+**Important**: You must clone or download the project first, as Docker needs access to the project directory for downloads, configuration files, and proper functionality.
+
+```bash
+# Option A: Clone with Git
+git clone https://github.com/itskavin/Thinkific-Downloader.git
+cd Thinkific-Downloader
+
+# Option B: Download ZIP
+# 1. Go to https://github.com/itskavin/Thinkific-Downloader
+# 2. Click "Code" -> "Download ZIP"
+# 3. Extract the ZIP file
+# 4. Open terminal in the extracted folder
+```
+
+#### **2.3 Setup Environment**
+```bash
+# Create .env file from template (if available)
+cp .env.example .env
+
+# Or create .env file manually (see Configuration section below)
+```
+
+#### **2.4 Run with Docker**
 ```bash
 # Pull the latest image
 docker pull kvnxo/thinkific-downloader:latest
 
-# Run with basic setup
+# Run from project directory (this is crucial!)
 docker run -it --rm \
   -v $(pwd)/downloads:/app/downloads \
-  -e COURSE_LINK="YOUR_COURSE_URL" \
-  -e COOKIE_DATA="YOUR_COOKIES" \
-  -e CLIENT_DATE="YOUR_CLIENT_DATE" \
+  -v $(pwd)/.env:/app/.env \
   kvnxo/thinkific-downloader:latest
 ```
 
-#### **1.3 Docker Compose (Recommended)**
-Create `docker-compose.yml`:
+#### **2.5 Docker Compose (Recommended)**
+Create `docker-compose.yml` (or use the provided one):
 ```yaml
 version: '3.8'
 services:
@@ -75,30 +120,31 @@ services:
       # Enhanced features
       - CONCURRENT_DOWNLOADS=3
       - RETRY_ATTEMPTS=3
+      - OUTPUT_DIR=./downloads
 ```
 
 Run with: `docker-compose up`
 
 ---
 
-### **Method 2: Python Package Installation**
+### **🐍 Option 3: Python Installation (For Developers)**
 
 For users who prefer native Python installation with full control.
 
-#### **2.1 Clone Repository**
+#### **3.1 Clone Repository**
 ```bash
 # Clone the repository
 git clone https://github.com/itskavin/Thinkific-Downloader.git
 cd Thinkific-Downloader
 ```
 
-#### **2.2 Quick Setup (Automated)**
+#### **3.2 Quick Setup (Automated)**
 ```bash
 # Run the automated installer
 python install.py
 ```
 
-#### **2.3 Manual Installation**
+#### **3.3 Manual Installation**
 ```bash
 # Create virtual environment (recommended)
 python -m venv venv
@@ -113,7 +159,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-#### **2.4 Verify Installation**
+#### **3.4 Verify Installation**
 ```bash
 # Test the installation
 python -m thinkific_downloader --help

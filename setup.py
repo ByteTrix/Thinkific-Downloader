@@ -28,9 +28,16 @@ setup(
     packages=find_packages(),
     python_requires=">=3.8",
     install_requires=[
+        "requests>=2.31.0",
+        "rich>=13.0.0",
         "tqdm>=4.65.0",
+        "urllib3>=2.0.0",
     ],
     extras_require={
+        "enhanced": [
+            "beautifulsoup4>=4.12.0",
+            "lxml>=4.9.0",
+        ],
         "brotli": ["brotli>=1.0.9"],
     },
     entry_points={
