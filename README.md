@@ -34,20 +34,8 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 
 ### 🎯 **Progress Monitoring**
 #### Example Progress UI
-```
-� Resume Status Summary
-	✅ 5 files already completed
-	📥 2 files partially downloaded (will resume)
-	❌ 1 files previously failed (will retry)
 
-📁 Files to download: 31
-🔄 Parallel workers: 3
-⚡ Enhanced features: Rate limiting, Resume, Validation
-
-🎥 welcome-video.mp4 ████████████████████████████ 100% 156.2MB • 12.3MB/s • Complete
-🔄 lesson-02.mp4 ████████████░░░░░░░░░░░░░░░░ 45% 89.1MB/198.4MB • 8.7MB/s • 0:00:12
-⏳ lesson-03.pdf ░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0% Queued
-```
+![Progress UI](images/image.png)
 
 ### 🔒 **Reliability & Safety**
 - **🔄 Exponential Retry Logic** - Smart retry with jitter for failed downloads
