@@ -2,7 +2,15 @@
 
 This guide will walk you through setting up the required environment variables to download courses from Thinkific-based platforms.
 
-## 📋 Prerequisites
+## � **Reference Video (Optional)**
+
+For a general overview of using browser DevTools to extract authentication data, you can watch this reference video: **[How to Extract Authentication Data from Browser](https://youtu.be/owi-cOcpceI?t=60)**
+
+**⚠️ Important Note:** The video above is just a **general reference** for understanding browser DevTools concepts. **Follow the specific steps below for this Thinkific Downloader project**, as the exact fields and process may differ from the video.
+
+---
+
+## �📋 Prerequisites
 
 - A web browser (Chrome, Firefox, Edge, Safari)
 - Access to the course you want to download
@@ -43,6 +51,8 @@ Or manually create a `.env` file and copy the contents from `.env.example`.
 ### **Step 3: Extract Authentication Data**
 
 This is the most important step. You need to capture authentication cookies and timestamp.
+
+**📺 Visual Reference:** While the [video guide](https://youtu.be/owi-cOcpceI?t=60) shows similar concepts, **follow these exact steps below** for Thinkific-based platforms.
 
 #### **3.1 Open Developer Tools**
 
@@ -151,6 +161,8 @@ DEBUG=false
 ---
 
 ## 🚨 Troubleshooting
+
+**📺 Need visual help?** The [reference video](https://youtu.be/owi-cOcpceI?t=60) shows general DevTools concepts, but **follow our specific steps above** for this project.
 
 ### **Problem: Can't find course_player request**
 
