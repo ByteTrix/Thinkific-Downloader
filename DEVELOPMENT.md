@@ -113,6 +113,12 @@ pip install pre-commit
 pre-commit install
 ```
 
+### **2.1 Environment Configuration**
+
+**🔧 For testing and development**, you'll need to set up authentication:
+- **Production Guide**: [ENV_SETUP.md](ENV_SETUP.md) - Complete setup for end users
+- **Development**: Copy `.env.example` to `.env` and configure for your test course
+
 ### **3. IDE Configuration**
 
 #### **VS Code Settings** (`.vscode/settings.json`)

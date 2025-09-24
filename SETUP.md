@@ -49,8 +49,10 @@ Get the latest version directly from GitHub:
 2. **Setup configuration**:
    ```bash
    cp .env.example .env
-   # Edit .env with your course details (see Authentication Setup below)
+   # ⚠️ IMPORTANT: Follow ENV_SETUP.md for detailed authentication setup
    ```
+   
+   **🔧 [Complete Environment Setup Guide](ENV_SETUP.md)** - Step-by-step instructions for extracting authentication data
    
 3. **Run with Docker** (Recommended):
    ```bash
