@@ -1,6 +1,6 @@
 import json
 import re
-import urllib.request
+import requests
 import zlib
 from typing import Optional, List
 from pathlib import Path
@@ -51,35 +51,40 @@ def video_downloader_wistia(wistia_id: str, file_name: Optional[str] = None, qua
             headers['Accept-Encoding'] = 'gzip, deflate, br'
         else:
             headers['Accept-Encoding'] = 'gzip, deflate'
-        req = urllib.request.Request(json_url, headers=headers)
+
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                raw_bytes = resp.read()
-                encoding = resp.headers.get('Content-Encoding', '')
-                if 'br' in encoding:
+            resp = requests.get(json_url, headers=headers, timeout=30)
+
+            # Handle compressed response data
+            data = resp.content
+            encoding = resp.headers.get('Content-Encoding', '')
+
+            if 'br' in encoding:
+                try:
+                    import brotli  # type: ignore
+                    raw_decoded = brotli.decompress(data)
+                except Exception:
+                    # Attempt python's built-in zlib alt decompress for brotli mislabels (rare)
                     try:
-                        import brotli  # type: ignore
-                        raw_decoded = brotli.decompress(raw_bytes)
+                        raw_decoded = zlib.decompress(data)
                     except Exception:
-                        # Attempt python's built-in zlib alt decompress for brotli mislabels (rare)
-                        try:
-                            raw_decoded = zlib.decompress(raw_bytes)
-                        except Exception:
-                            return None
-                elif 'gzip' in encoding:
-                    raw_decoded = zlib.decompress(raw_bytes, 16 + zlib.MAX_WBITS)
-                elif 'deflate' in encoding:
-                    # deflate can be raw or zlib-wrapped
-                    try:
-                        raw_decoded = zlib.decompress(raw_bytes)
-                    except zlib.error:
-                        raw_decoded = zlib.decompress(raw_bytes, -zlib.MAX_WBITS)
-                else:
-                    try:
-                        return raw_bytes.decode('utf-8')
-                    except Exception:
-                        return raw_bytes.decode('latin-1', errors='replace')
-                return raw_decoded.decode('utf-8', errors='replace')
+                        return None
+            elif 'gzip' in encoding:
+                raw_decoded = zlib.decompress(data, 16 + zlib.MAX_WBITS)
+            elif 'deflate' in encoding:
+                # deflate can be raw or zlib-wrapped
+                try:
+                    raw_decoded = zlib.decompress(data)
+                except zlib.error:
+                    raw_decoded = zlib.decompress(data, -zlib.MAX_WBITS)
+            else:
+                try:
+                    return data.decode('utf-8')
+                except Exception:
+                    return data.decode('latin-1', errors='replace')
+
+            return raw_decoded.decode('utf-8', errors='replace')
+
         except Exception as e:
             print(f"Wistia fetch error ({'simple' if simple else 'full'} headers): {e}")
             return None
@@ -95,13 +100,17 @@ def video_downloader_wistia(wistia_id: str, file_name: Optional[str] = None, qua
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
-        print("Failed to decode Wistia JSON. First 120 chars:", raw[:120])
+        from .downloader import SETTINGS  # Import here to avoid circular import
+        if SETTINGS and SETTINGS.debug:
+            print("Failed to decode Wistia JSON. First 120 chars:", raw[:120])
         return
 
     media = data.get('media') or {}
     assets = media.get('assets') or []
     if not assets:
-        print("No assets in Wistia response.")
+        from .downloader import SETTINGS  # Import here to avoid circular import
+        if SETTINGS and SETTINGS.debug:
+            print("No assets in Wistia response.")
         return
     all_formats_flag = os.getenv('ALL_VIDEO_FORMATS', 'false').lower() in ('1','true','yes','on')
 

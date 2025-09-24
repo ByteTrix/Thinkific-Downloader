@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Iterable, List, Optional
 from urllib.parse import urlparse, parse_qs
-import urllib.request
+import requests
 
 from .config import Settings, load_env
 from .file_utils import filter_filename, unicode_decode
@@ -35,15 +35,17 @@ def init_settings():
         CONTENT_PROCESSOR = ContentProcessor()
 
 
+
+
 def http_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 60) -> str:
-    import time
-    import urllib.request
-    import urllib.error
-    import gzip
-    
+    """
+    Make an HTTP GET request using requests library with Unicode support.
+    This replaces urllib.request which has issues with Unicode characters in headers.
+    """
     init_settings()
     if SETTINGS is None:
         raise RuntimeError("Settings not initialized")
+
     request_headers = {
         'Accept-Encoding': 'gzip, deflate, br',
         'Sec-Fetch-Mode': 'cors',
@@ -55,26 +57,84 @@ def http_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 
     }
     if headers:
         request_headers.update(headers)
-    
+
+    # Debug logging - only when DEBUG is enabled
+    if SETTINGS.debug:
+        print(f"[DEBUG] Making request to: {url}")
+        print(f"[DEBUG] Request headers: {request_headers}")
+
+    # Prepare headers for requests, handling any Unicode characters
+    prepared_headers = {}
+    for name, value in request_headers.items():
+        if isinstance(value, str):
+            # Handle any remaining Unicode characters in header values
+            try:
+                # Try UTF-8 encoding for Unicode characters
+                prepared_headers[name] = value
+            except UnicodeEncodeError:
+                # This shouldn't happen with requests, but fallback just in case
+                prepared_headers[name] = value.encode('utf-8', errors='replace').decode('utf-8')
+        else:
+            prepared_headers[name] = str(value)
+
     # Retry logic for network reliability
     for attempt in range(3):
         try:
-            req = urllib.request.Request(url, headers=request_headers)
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = resp.read()
-                encoding = resp.headers.get('Content-Encoding', '')
-                if 'gzip' in encoding:
-                    data = gzip.decompress(data)
-                return data.decode('utf-8', errors='replace')
-                
-        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
+            # Use requests.get with native Unicode support
+            resp = requests.get(
+                url,
+                headers=prepared_headers,
+                timeout=15,
+                allow_redirects=True
+            )
+
+            # Debug logging - only when DEBUG is enabled
+            if SETTINGS.debug:
+                print(f"[DEBUG] Response status: {resp.status_code}")
+                print(f"[DEBUG] All response headers:")
+                for name, value in resp.headers.items():
+                    print(f"  {name}: {repr(value)}")  # Use repr to show Unicode characters
+                    if any(ord(c) > 127 for c in str(value)):  # Check for non-ASCII chars
+                        print(f"    ⚠️  Unicode characters detected in header '{name}'")
+
+            # The requests library automatically handles gzip/deflate decompression
+            # So we don't need to manually decompress - just get the text directly
+            encoding = resp.headers.get('Content-Encoding', '')
+            if SETTINGS.debug:
+                print(f"[DEBUG] Content-Encoding header: {repr(encoding)}")
+            
+            # Use resp.text which handles encoding automatically
+            try:
+                decoded_data = resp.text
+                if SETTINGS.debug:
+                    print(f"[DEBUG] Successfully got response text (length: {len(decoded_data)})")
+                return decoded_data
+            except Exception as decode_e:
+                if SETTINGS.debug:
+                    print(f"[DEBUG] Error getting response text: {decode_e}")
+                # Fallback: try manual decoding from content
+                try:
+                    decoded_data = resp.content.decode('latin-1', errors='replace')
+                    if SETTINGS.debug:
+                        print(f"[DEBUG] Successfully decoded with latin-1 fallback")
+                    return decoded_data
+                except Exception as fallback_e:
+                    if SETTINGS.debug:
+                        print(f"[DEBUG] Fallback decode also failed: {fallback_e}")
+                    raise decode_e
+
+        except (requests.exceptions.RequestException, TimeoutError) as e:
+            if SETTINGS.debug:
+                print(f"[DEBUG] Network error on attempt {attempt + 1}: {e}")
             if attempt < 2:  # Not last attempt
                 print(f"   ⚠️  Network timeout, retrying... (attempt {attempt + 1}/3)")
                 time.sleep(2)
                 continue
             else:
+                if SETTINGS.debug:
+                    print(f"[DEBUG] All retry attempts failed")
                 raise e
-    
+
     # Should never reach here, but just in case
     raise RuntimeError("All retry attempts failed")
 
@@ -93,10 +153,20 @@ def download_file_redirect(url: str, file_name: Optional[str] = None):
         'cookie': SETTINGS.cookie_data,
         'User-Agent': USER_AGENT,
     }
-    req = urllib.request.Request(url, headers=request_headers)
-    # We allow redirect to capture final URL
-    with urllib.request.urlopen(req) as resp:
-        final_url = resp.geturl()
+
+    # Use requests to follow redirects and get final URL
+    try:
+        resp = requests.head(url, headers=request_headers, allow_redirects=True, timeout=15)
+        final_url = resp.url
+    except Exception:
+        # Fallback to GET if HEAD fails
+        try:
+            resp = requests.get(url, headers=request_headers, allow_redirects=True, timeout=15)
+            final_url = resp.url
+        except Exception as e:
+            print(f"Failed to follow redirects: {e}")
+            final_url = url
+
     parsed = urlparse(final_url)
     fname = os.path.basename(parsed.path)
     qs = parse_qs(parsed.query)
@@ -654,22 +724,20 @@ def collect_chapter_tasks(content_ids: Iterable[Any], chapter_path: Path):
 def collect_video_task_wistia(wistia_id: str, file_name: str, dest_dir: Path):
     """Collect Wistia video download task."""
     try:
-        from urllib.request import urlopen
-        from urllib.error import URLError, HTTPError
         import json
         import time
-        
+
         # Get video info from Wistia API with retry logic
         api_url = f"https://fast.wistia.com/embed/medias/{wistia_id}.json"
-        
+
         data = None
         for attempt in range(3):  # 3 retry attempts
             try:
-                with urlopen(api_url, timeout=15) as response:
-                    data = json.loads(response.read().decode())
+                response = requests.get(api_url, timeout=15)
+                data = response.json()
                 break  # Success, exit retry loop
-                
-            except (URLError, HTTPError, TimeoutError) as e:
+
+            except (requests.exceptions.RequestException, TimeoutError) as e:
                 if attempt < 2:  # Not last attempt
                     print(f"   ⚠️  Network timeout, retrying... (attempt {attempt + 1}/3)")
                     time.sleep(2)  # Wait 2 seconds before retry
@@ -677,19 +745,19 @@ def collect_video_task_wistia(wistia_id: str, file_name: str, dest_dir: Path):
                 else:
                     print(f"   ❌ Failed to get video info after 3 attempts: {file_name}")
                     return
-        
+
         if not data:
             return
-            
+
         assets = data.get('media', {}).get('assets', [])
         if not assets:
             return
-            
+
         # Find best quality video
         video_assets = [a for a in assets if a.get('type') == 'original']
         if not video_assets:
             video_assets = [a for a in assets if a.get('type') in ['mp4_720', 'mp4_540', 'mp4_360']]
-        
+
         if video_assets:
             selected = video_assets[0]
             video_url = selected.get('url')
@@ -763,11 +831,13 @@ def chapterwise_download(content_ids: Iterable[Any]):
     for content_id in content_ids:
         match = next((c for c in COURSE_CONTENTS if c['id'] == content_id), None)
         if not match:
-            print(f"[SKIP] No content found for id {content_id}")
+            if SETTINGS and SETTINGS.debug:
+                print(f"[SKIP] No content found for id {content_id}")
             index += 1
             continue
         ctype = match.get('contentable_type') or match.get('default_lesson_type_label')
-        print(f"[QUEUE] Processing content id {content_id} type {ctype} name {match.get('name')}")
+        if SETTINGS and SETTINGS.debug:
+            print(f"[QUEUE] Processing content id {content_id} type {ctype} name {match.get('name')}")
         
         # HTML Item (Notes) - Queue downloads
         if ctype == 'HtmlItem':

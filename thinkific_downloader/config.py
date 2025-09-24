@@ -68,17 +68,30 @@ class Settings:
         resume_partial = os.getenv('RESUME_PARTIAL', 'true').lower() in ('1', 'true', 'yes', 'on')
         debug = os.getenv('DEBUG', 'false').lower() in ('1', 'true', 'yes', 'on')
         
+        # Clean cookie data to remove Unicode characters that cause encoding issues
+        if cookie_data:
+            # Replace problematic Unicode characters with safe alternatives
+            cookie_data = cookie_data.replace('\u2026', '...')  # Replace horizontal ellipsis
+            cookie_data = cookie_data.replace('\u2018', "'")    # Replace left single quotation mark
+            cookie_data = cookie_data.replace('\u2019', "'")    # Replace right single quotation mark
+            cookie_data = cookie_data.replace('\u201c', '"')    # Replace left double quotation mark
+            cookie_data = cookie_data.replace('\u201d', '"')    # Replace right double quotation mark
+            cookie_data = cookie_data.replace('\u2013', '-')    # Replace en dash
+            cookie_data = cookie_data.replace('\u2014', '-')    # Replace em dash
+            # Remove any remaining non-ASCII characters
+            cookie_data = ''.join(c for c in cookie_data if ord(c) < 128)
+
         # Validation
         if not client_date or not cookie_data:
             raise SystemExit('Cookie data and Client Date not set. Use the ReadMe file first before using this script.')
-            
+
         # Basic directory permissions check
         cwd = Path.cwd()
         if not os.access(cwd, os.W_OK):
             raise SystemExit('Current directory is not writable.')
         return cls(
-            client_date=client_date, 
-            cookie_data=cookie_data, 
+            client_date=client_date,
+            cookie_data=cookie_data,
             video_download_quality=video_download_quality,
             output_dir=output_dir,
             ffmpeg_presentation_merge=ffmpeg_merge,

@@ -167,6 +167,8 @@ python thinkificdownloader.py
 
 > 👨‍💻 **Developer?** Visit [**DEVELOPMENT.md**](DEVELOPMENT.md) for architecture overview, API reference, and contribution guidelines.
 
+> 🎯 **Want to download specific lessons only?** See our [**SELECTIVE_DOWNLOAD.md**](SELECTIVE_DOWNLOAD.md) guide for downloading individual chapters or lessons instead of the entire course.
+
 ## ⚙️ **Enhanced Configuration**
 
 **🚨 BEFORE YOU START:** Follow our **[Complete Environment Setup Guide](ENV_SETUP.md)** for step-by-step instructions on extracting authentication data from your browser.

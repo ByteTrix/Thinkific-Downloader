@@ -225,6 +225,7 @@ If authentication works, you should see course information being fetched. If not
 - 🐛 **Issues**: [Report Problems](https://github.com/ByteTrix/Thinkific-Downloader/issues)
 - 💬 **Questions**: [Community Discussions](https://github.com/ByteTrix/Thinkific-Downloader/discussions)
 - 📚 **Documentation**: [Main README](README.md)
+- 🎯 **Selective Downloads**: [Download Specific Lessons Only](SELECTIVE_DOWNLOAD.md)
 
 ---
 
