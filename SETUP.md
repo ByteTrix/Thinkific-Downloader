@@ -67,54 +67,6 @@ Get the latest version directly from GitHub:
 
 ---
 
-### **🐳 Option 2: Docker Only**
-
-If you want to use Docker without cloning:
-
----
-
-## 🔐 Authentication Setup
-
-To download courses, you need to obtain authentication data from your browser.
-
-### **Step 1: Access Your Course**
-1. Open your browser (Chrome, Firefox, etc.)
-2. Navigate to your Thinkific course
-3. Log in with your credentials
-4. Make sure you can access the course content
-
-### **Step 2: Extract Authentication Data**
-
-#### **Method A: Browser Developer Tools (Recommended)**
-
-1. **Open Developer Tools**:
-   - Press `F12` or `Ctrl+Shift+I` (Windows/Linux)
-   - Press `Cmd+Option+I` (Mac)
-
-2. **Go to Network Tab**:
-   - Click the "Network" tab
-   - Refresh the page (F5)
-
-3. **Find API Request**:
-   - Look for requests to your course domain
-   - Click on any request to the course site
-   - Go to "Headers" section
-
-4. **Copy Required Headers**:
-   - **Cookie**: Copy the entire `Cookie` header value
-   - **Client-Date**: Copy the `Client-Date` header value
-
-#### **Method B: Browser Extension (Alternative)**
-
-Use extensions like "Header Editor" or "ModHeader" to view headers.
-
-### **Step 3: Get Course URL**
-Copy the full URL of your course from the browser address bar.
-
-**Example**: `https://yourschool.thinkific.com/courses/your-course-name`
-
----
-
 ## ⚙️ Configuration Options
 
 ### **Environment Variables File (.env)**
