@@ -62,9 +62,9 @@ setup(
     ],
     keywords="thinkific downloader education video course offline",
     project_urls={
-        "Bug Reports": "https://github.com/itskavin/Thinkific-Downloader/issues",
-        "Source": "https://github.com/itskavin/Thinkific-Downloader",
-        "Documentation": "https://github.com/itskavin/Thinkific-Downloader#readme",
+        "Bug Reports": "https://github.com/ByteTrix/Thinkific-Downloader/issues",
+        "Source": "https://github.com/ByteTrix/Thinkific-Downloader",
+        "Documentation": "https://github.com/ByteTrix/Thinkific-Downloader#readme",
         "Docker Hub": "https://hub.docker.com/r/kvnxo/thinkific-downloader",
     },
 )

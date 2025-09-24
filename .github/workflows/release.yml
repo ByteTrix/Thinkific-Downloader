@@ -41,14 +41,14 @@ jobs:
           
           **GitHub Packages:**
           ```bash
-          docker pull ghcr.io/itskavin/thinkific-downloader:${{ steps.version.outputs.tag }}
+          docker pull ghcr.io/bytetrix/thinkific-downloader:${{ steps.version.outputs.tag }}
           # or  
-          docker pull ghcr.io/itskavin/thinkific-downloader:latest
+          docker pull ghcr.io/bytetrix/thinkific-downloader:latest
           ```
           
           **Setup and Run:**
           ```bash
-          git clone https://github.com/itskavin/Thinkific-Downloader.git
+          git clone https://github.com/ByteTrix/Thinkific-Downloader.git
           cd Thinkific-Downloader
           cp .env.example .env
           # Edit .env with your details
@@ -57,7 +57,7 @@ jobs:
           
           **Python Direct:**
           ```bash
-          git clone https://github.com/itskavin/Thinkific-Downloader.git
+          git clone https://github.com/ByteTrix/Thinkific-Downloader.git
           cd Thinkific-Downloader
           pip install -r requirements.txt
           python thinkificdownloader.py

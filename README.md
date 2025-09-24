@@ -88,7 +88,7 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 **Step 1: Get the Project**
 ```bash
 # Clone or download the project
-git clone https://github.com/itskavin/Thinkific-Downloader.git
+git clone https://github.com/ByteTrix/Thinkific-Downloader.git
 cd Thinkific-Downloader
 
 # Or download and extract ZIP, then navigate to project directory
@@ -108,8 +108,8 @@ docker pull kvnxo/thinkific-downloader
 docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env kvnxo/thinkific-downloader
 
 # Option 2: GitHub Packages  
-docker pull ghcr.io/itskavin/thinkific-downloader
-docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env ghcr.io/itskavin/thinkific-downloader
+docker pull ghcr.io/bytetrix/thinkific-downloader
+docker run -it --rm -v $(pwd)/downloads:/app/downloads --env-file .env ghcr.io/bytetrix/thinkific-downloader
 
 # Option 3: Docker Compose (recommended)
 docker-compose up
@@ -119,7 +119,7 @@ docker-compose up
 
 ```bash
 # Step 1: Clone the project
-git clone https://github.com/itskavin/Thinkific-Downloader.git
+git clone https://github.com/ByteTrix/Thinkific-Downloader.git
 cd Thinkific-Downloader
 
 # Step 2: Install dependencies
@@ -136,7 +136,7 @@ Get the latest source code:
 
 ```bash
 # Clone the repository
-git clone https://github.com/itskavin/Thinkific-Downloader.git
+git clone https://github.com/ByteTrix/Thinkific-Downloader.git
 cd Thinkific-Downloader
 
 # Setup and run with Docker
