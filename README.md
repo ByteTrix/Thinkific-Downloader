@@ -236,17 +236,15 @@ docker-compose up
     ├── 📁 01. Introduction/
     │   ├── 📁 01. Welcome Video/
     │   │   ├── 🎥 welcome-video.mp4
-    │   │   └── 📄 video-info.json
     │   └── 📁 02. Course Overview/
     │       ├── 📄 course-overview.html
-    │       └── 📊 quiz-structure.json
+    │       └── 📊 quiz-structure.html
     ├── 📁 02. Getting Started/
     │   └── 📁 01. Setup Instructions/
     │       ├── 🎥 setup-instructions.mp4
     │       ├── 📄 setup-guide.pdf
     │       └── 🎨 presentation-slides.mp4
-    ├── 📄 course-metadata.json
-    └── 📊 download-summary.json
+    └── 📊 thinkific_progress.json
 ```
 
 **Customization**: Set `OUTPUT_DIR=./my-custom-path` in your `.env` file to change the download location.
