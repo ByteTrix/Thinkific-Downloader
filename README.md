@@ -190,9 +190,9 @@ VIDEO_DOWNLOAD_QUALITY="720p" # Video quality (Original File, 720p, 1080p, etc.)
 OUTPUT_DIR="./downloads"    # Download directory (defaults to ./downloads)
 
 # ===============================================
-# ENHANCED FEATURES
+# ENHANCED FEATURES  
 # ===============================================
-CONCURRENT_DOWNLOADS=3       # Number of parallel downloads (1-5 recommended)
+CONCURRENT_DOWNLOADS=3       # ⚠️ CRITICAL: Keep ≤3 due to Thinkific rate limit (3 req/sec)
 RETRY_ATTEMPTS=3            # Number of retry attempts for failed downloads
 DOWNLOAD_DELAY=1.0          # Delay between downloads (seconds)
 RATE_LIMIT_MB_S=            # Rate limit in MB/s (empty = unlimited)
@@ -343,6 +343,12 @@ docker-compose up --force-recreate
 - For very large files, ensure you have enough disk space
 - Consider using `CONCURRENT_DOWNLOADS=1` for memory-constrained systems
 
+**Q: Downloads failing or getting skipped?**
+- **Check your `CONCURRENT_DOWNLOADS` setting** - must be ≤3 for Thinkific rate limit
+- Thinkific has ~3 requests/sec rate limit - higher values cause API errors
+- Try reducing to `CONCURRENT_DOWNLOADS=2` or `CONCURRENT_DOWNLOADS=1`
+- Increase `DOWNLOAD_DELAY=2.0` for additional safety
+
 ## 🛠️ **Development & Contributing**
 
 > 👨‍💻 **For developers:** See [**DEVELOPMENT.md**](DEVELOPMENT.md) for complete development setup, architecture overview, API reference, testing guidelines, and contribution workflow.
@@ -423,6 +429,15 @@ This tool is provided for educational purposes only. By using this software:
 - Users are solely responsible for compliance with applicable laws
 - This tool is provided "as-is" without warranty of any kind
 - Course platforms may update their systems, breaking compatibility
+
+---
+
+## 🙏 **Acknowledgments & Credits**
+
+This project is a modern Python rewrite and enhancement of the original:
+
+- **[Thinki-Downloader](https://github.com/sumeetweb/Thinki-Downloader)** by [@sumeetweb](https://github.com/sumeetweb) - The original foundation and inspiration for this modern Python implementation,
+I'm grateful for the foundational work that made this enhanced version possible.
 
 ## 📜 **License**
 

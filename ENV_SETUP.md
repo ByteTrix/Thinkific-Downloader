@@ -130,12 +130,36 @@ CLIENT_DATE="25:08:2024-10:30:45GMT"
 
 # Download Settings (Optional)
 OUTPUT_DIR=./downloads
-CONCURRENT_DOWNLOADS=3
+CONCURRENT_DOWNLOADS=3  # ⚠️ KEEP ≤3 - Thinkific rate limit!
 RETRY_ATTEMPTS=3
 RESUME_PARTIAL=true
 RATE_LIMIT_MB_S=10.0
 DEBUG=false
 ```
+
+### ⚠️ **CRITICAL: Thinkific Rate Limiting**
+
+**Thinkific has a rate limit of approximately 3 requests per second.**
+
+**🚨 IMPORTANT SAFETY GUIDELINES:**
+- **CONCURRENT_DOWNLOADS should NEVER exceed 3**
+- Higher values (4, 5, 10, etc.) will cause:
+  - ❌ API errors and failed downloads
+  - ❌ Files being skipped due to server rejections
+  - ❌ Potential temporary IP blocking
+  - ❌ Incomplete course downloads
+
+**✅ SAFE CONFIGURATION:**
+```bash
+# Safe and recommended settings
+CONCURRENT_DOWNLOADS=3    # Maximum safe value
+DOWNLOAD_DELAY=1.0       # 1 second between downloads
+```
+
+**🐌 IF YOU EXPERIENCE ISSUES:**
+- Reduce `CONCURRENT_DOWNLOADS` to 2 or 1
+- Increase `DOWNLOAD_DELAY` to 2.0 or higher
+- Lower values = slower downloads but 100% reliability
 
 ---
 
