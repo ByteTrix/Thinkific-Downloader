@@ -38,23 +38,13 @@ cp .env.example .env
 
 Or manually create a `.env` file and copy the contents from `.env.example`.
 
-### **Step 2: Get Course Link**
-
-1. **Log into your course platform** (the Thinkific-based site)
-2. **Navigate to the course** you want to download
-3. **Copy the full URL** from your browser's address bar
-4. **Add it to your .env file:**
-   ```env
-   COURSE_LINK=https://your-course-platform.com/courses/your-course-name
-   ```
-
-### **Step 3: Extract Authentication Data**
+### **Step 2: Extract Authentication Data**
 
 This is the most important step. You need to capture authentication cookies and timestamp.
 
 **📺 Visual Reference:** While the [video guide](https://youtu.be/owi-cOcpceI?t=60) shows similar concepts, **follow these exact steps below** for Thinkific-based platforms.
 
-#### **3.1 Open Developer Tools**
+#### **2.1 Open Developer Tools**
 
 **For Chrome/Edge:**
 - Press `F12` OR
@@ -70,19 +60,19 @@ This is the most important step. You need to capture authentication cookies and 
 - Enable Developer menu first: Safari → Preferences → Advanced → "Show Develop menu"
 - Then: Develop → Show Web Inspector
 
-#### **3.2 Access Network Tab**
+#### **2.2 Access Network Tab**
 
 1. **Click on the "Network" tab** in Developer Tools
 2. **Make sure "All" or "XHR" filter is selected**
 3. **Clear any existing logs** (click the clear button 🗑️)
 
-#### **3.3 Trigger Course Data Request**
+#### **2.3 Trigger Course Data Request**
 
 1. **Refresh the course page** (F5 or Ctrl+R)
 2. **OR navigate to any lesson** within the course
 3. **Wait for the page to fully load**
 
-#### **3.4 Find the API Request**
+#### **2.4 Find the API Request**
 
 1. **In the Network tab, look for a request containing:**
    ```
@@ -95,7 +85,7 @@ This is the most important step. You need to capture authentication cookies and 
    
 3. **Click on this request** to select it
 
-#### **3.5 Extract Cookie Data**
+#### **2.5 Extract Cookie Data**
 
 1. **Click on the request** you found
 2. **Look for the "Headers" section** (or click "Headers" tab)
@@ -112,7 +102,7 @@ This is the most important step. You need to capture authentication cookies and 
 - It should be very long (several hundred characters)
 - Include all parts separated by semicolons
 
-#### **3.6 Extract Client Date**
+#### **2.6 Extract Client Date**
 
 1. **In the same request headers section**
 2. **Look for "Response Headers"** 
@@ -120,22 +110,11 @@ This is the most important step. You need to capture authentication cookies and 
 4. **Copy the date value**
 
    ```env
-   CLIENT_DATE=Wed, 25 Sep 2024 10:30:45 GMT
+   CLIENT_DATE=25:08:202410:30:45 GMT
    ```
 
 ---
 
-## 🔍 Alternative Method: Raw View
-
-If you're having trouble finding the headers:
-
-1. **Click on the course_player request**
-2. **Click "Raw" tab** (if available)
-3. **Look for lines starting with:**
-   - `cookie: ` (copy everything after this)
-   - `date: ` (copy everything after this)
-
----
 
 ## ✅ Final Environment File
 
@@ -143,11 +122,11 @@ Your `.env` file should look like this:
 
 ```env
 # Course Configuration
-COURSE_LINK=https://your-platform.com/courses/your-course
+COURSE_LINK="https://your-platform.com/courses/your-course"
 
 # Authentication (Required)
-COOKIE_DATA=_session_id=abcd1234...; user_token=xyz789...; other_cookies=values...
-CLIENT_DATE=Wed, 25 Sep 2024 10:30:45 GMT
+COOKIE_DATA="_session_id=abcd1234...; user_token=xyz789...; other_cookies=values..."
+CLIENT_DATE="25:08:2024-10:30:45GMT"
 
 # Download Settings (Optional)
 OUTPUT_DIR=./downloads
