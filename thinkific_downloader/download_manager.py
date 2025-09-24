@@ -13,23 +13,54 @@ from rich.progress import Progress, TaskID, TextColumn, BarColumn, TimeRemaining
 from rich.text import Text
 from rich.progress import ProgressColumn
 
-class CustomSpeedColumn(ProgressColumn):
-    """Speed column that shows 'Queued' instead of '?'"""
+class QueuedSpeedColumn(ProgressColumn):
+    """Speed column that shows 'Queued' instead of unrealistic speeds"""
     def render(self, task):
-        if task.speed is None:
+        # Try to get Rich's calculated speed
+        try:
+            # Rich Progress stores speed in task.speed as bytes per second
+            speed = task.speed
+        except:
+            speed = None
+        
+        if speed is None or speed <= 0:
             return Text("Queued", style="dim")
-        return Text(f"{task.speed:.1f} MB/s" if task.speed > 1 else f"{task.speed*1000:.0f} KB/s")
+        
+        # Convert bytes/sec to readable format
+        if speed >= 1024 * 1024:  # >= 1 MB/s
+            speed_display = speed / (1024 * 1024)
+            return Text(f"{speed_display:.1f} MB/s", style="green")
+        elif speed >= 1024:  # >= 1 KB/s  
+            speed_display = speed / 1024
+            return Text(f"{speed_display:.1f} KB/s", style="green")
+        else:
+            return Text(f"{speed:.0f} B/s", style="green")
 
-class CustomTimeColumn(ProgressColumn):
-    """Time remaining column that shows 'Queued' instead of '-:--:--'"""
+class QueuedTimeColumn(ProgressColumn):
+    """Time remaining column that shows 'Queued' for pending downloads"""
     def render(self, task):
-        if task.time_remaining is None:
+        try:
+            # Get Rich's calculated time remaining
+            time_remaining = task.time_remaining
+        except:
+            time_remaining = None
+        
+        if time_remaining is None or time_remaining <= 0:
             return Text("Queued", style="dim")
-        remaining = int(task.time_remaining)
+            
+        # Handle very long estimates (likely unrealistic)
+        if time_remaining > 86400:  # More than 24 hours
+            return Text("Long time", style="yellow")
+            
+        remaining = int(time_remaining)
         hours = remaining // 3600
         minutes = (remaining % 3600) // 60
         seconds = remaining % 60
-        return Text(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
+        
+        if hours > 0:
+            return Text(f"{hours:02d}:{minutes:02d}:{seconds:02d}", style="cyan")
+        else:
+            return Text(f"{minutes:02d}:{seconds:02d}", style="cyan")
 from rich.console import Console
 from .config import Settings
 from .file_utils import filter_filename
@@ -202,7 +233,7 @@ class DownloadManager:
         
         console = Console()
         
-        # Create rich progress display
+        # Create rich progress display  
         progress = Progress(
             TextColumn("[bold blue]{task.fields[filename]}", justify="right"),
             BarColumn(bar_width=40),
@@ -210,9 +241,9 @@ class DownloadManager:
             "•",
             DownloadColumn(),
             "•",
-            CustomSpeedColumn(),
-            "•",
-            CustomTimeColumn(),
+            TransferSpeedColumn(),
+            "•", 
+            TimeRemainingColumn(),
             console=console,
         )
         
@@ -406,26 +437,103 @@ class DownloadManager:
             return None
 
     def _validate_download(self, task: DownloadTask) -> bool:
-        """Validate downloaded file."""
-        if not self.settings.validate_downloads:
-            return True
-
+        """Validate downloaded file with comprehensive checks."""
+        if not task.dest_path.exists():
+            print(f"❌ File missing: {task.dest_path.name}")
+            return False
+        
         try:
-            # Check file size
-            if not self.validator.validate_file_size(task.dest_path, task.expected_size):
-                print(f"Size validation failed for {task.dest_path}")
+            file_size = task.dest_path.stat().st_size
+            
+            # Check if file is empty or too small
+            if file_size == 0:
+                print(f"❌ Empty file detected: {task.dest_path.name}")
+                task.dest_path.unlink()  # Remove empty file
                 return False
-
-            # Check checksum if provided
-            if task.checksum:
-                actual_checksum = self.validator.calculate_checksum(task.dest_path)
-                if actual_checksum != task.checksum:
-                    print(f"Checksum validation failed for {task.dest_path}")
+            
+            # For video/audio files, check if they're complete and valid
+            if task.dest_path.suffix.lower() in ['.mp4', '.mp3', '.wav', '.m4a']:
+                if not self._validate_media_file(task.dest_path, file_size):
                     return False
-
+            
+            # Check expected size if available
+            if task.expected_size and task.expected_size > 0:
+                size_ratio = file_size / task.expected_size
+                
+                # File should be at least 90% of expected size
+                if size_ratio < 0.9:
+                    print(f"❌ Incomplete download: {task.dest_path.name} ({file_size:,} bytes, expected {task.expected_size:,})")
+                    return False
+                
+                # File shouldn't be more than 110% of expected size (accounting for small variations)
+                if size_ratio > 1.1:
+                    print(f"⚠️  File larger than expected: {task.dest_path.name} ({file_size:,} bytes, expected {task.expected_size:,})")
+                    # Don't fail for this case, might be normal
+            
+            # Additional validation for specific file types
+            if not self._validate_file_integrity(task.dest_path):
+                return False
+            
+            print(f"✅ Validated: {task.dest_path.name} ({file_size:,} bytes)")
             return True
+            
         except Exception as e:
-            print(f"Validation error for {task.dest_path}: {e}")
+            print(f"❌ Validation error for {task.dest_path.name}: {e}")
+            return False
+    
+    def _validate_media_file(self, file_path: Path, file_size: int) -> bool:
+        """Validate media files (MP4, MP3, etc.) for corruption."""
+        try:
+            # Check for minimum file size (media files should be at least a few KB)
+            if file_size < 1024:  # Less than 1KB is suspicious for media
+                print(f"❌ Media file too small: {file_path.name} ({file_size} bytes)")
+                file_path.unlink()  # Remove corrupted file
+                return False
+            
+            # Read first and last few bytes to check file structure
+            with open(file_path, 'rb') as f:
+                # Check beginning of file for media headers
+                header = f.read(16)
+                
+                # MP4 files should start with specific signatures
+                if file_path.suffix.lower() == '.mp4':
+                    # Check for common MP4 signatures
+                    if not (b'ftyp' in header or b'mdat' in header[:8]):
+                        print(f"❌ Invalid MP4 header: {file_path.name}")
+                        file_path.unlink()
+                        return False
+                
+                # Check if we can read the end of file (indicates complete download)
+                try:
+                    f.seek(-min(1024, file_size), 2)  # Go to last 1KB or file size
+                    f.read(1024)
+                except:
+                    print(f"❌ Cannot read end of file: {file_path.name}")
+                    file_path.unlink()
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Media validation failed for {file_path.name}: {e}")
+            if file_path.exists():
+                file_path.unlink()  # Remove corrupted file
+            return False
+    
+    def _validate_file_integrity(self, file_path: Path) -> bool:
+        """Basic file integrity checks."""
+        try:
+            # Try to read the file completely
+            with open(file_path, 'rb') as f:
+                chunk_size = 8192
+                while chunk := f.read(chunk_size):
+                    pass  # Just reading to ensure file is accessible
+            return True
+            
+        except Exception as e:
+            print(f"❌ File integrity check failed for {file_path.name}: {e}")
+            if file_path.exists():
+                file_path.unlink()  # Remove corrupted file
             return False
 
     def close(self):

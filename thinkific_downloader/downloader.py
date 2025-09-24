@@ -36,6 +36,11 @@ def init_settings():
 
 
 def http_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 60) -> str:
+    import time
+    import urllib.request
+    import urllib.error
+    import gzip
+    
     init_settings()
     if SETTINGS is None:
         raise RuntimeError("Settings not initialized")
@@ -50,13 +55,28 @@ def http_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 
     }
     if headers:
         request_headers.update(headers)
-    req = urllib.request.Request(url, headers=request_headers)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = resp.read()
-        encoding = resp.headers.get('Content-Encoding', '')
-        if 'gzip' in encoding:
-            data = gzip.decompress(data)
-        return data.decode('utf-8', errors='replace')
+    
+    # Retry logic for network reliability
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url, headers=request_headers)
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = resp.read()
+                encoding = resp.headers.get('Content-Encoding', '')
+                if 'gzip' in encoding:
+                    data = gzip.decompress(data)
+                return data.decode('utf-8', errors='replace')
+                
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
+            if attempt < 2:  # Not last attempt
+                print(f"   ⚠️  Network timeout, retrying... (attempt {attempt + 1}/3)")
+                time.sleep(2)
+                continue
+            else:
+                raise e
+    
+    # Should never reach here, but just in case
+    raise RuntimeError("All retry attempts failed")
 
 
 def download_file_redirect(url: str, file_name: Optional[str] = None):
@@ -98,15 +118,88 @@ def add_download_task(url: str, dest_path: Path, content_type: str = "file"):
     if DOWNLOAD_TASKS is None:
         DOWNLOAD_TASKS = []
     
-    # Skip if file already exists
+    # Check if file exists and validate it
+    should_download = True
     if dest_path.exists():
-        return
+        file_size = dest_path.stat().st_size
+        
+        # Always re-download empty or suspiciously small files
+        if file_size == 0:
+            print(f"🔄 Re-downloading empty file: {dest_path.name}")
+            dest_path.unlink()
+            should_download = True
+        elif content_type in ['video', 'audio'] and file_size < 1024:
+            print(f"🔄 Re-downloading corrupt media file: {dest_path.name}")
+            dest_path.unlink()
+            should_download = True
+        elif _validate_existing_file(dest_path, content_type):
+            print(f"✅ File already complete: {dest_path.name}")
+            should_download = False
+        else:
+            print(f"🔄 Re-downloading invalid file: {dest_path.name}")
+            dest_path.unlink()
+            should_download = True
     
-    DOWNLOAD_TASKS.append({
-        'url': url,
-        'dest_path': dest_path,
-        'content_type': content_type
-    })
+    if should_download:
+        DOWNLOAD_TASKS.append({
+            'url': url,
+            'dest_path': dest_path,
+            'content_type': content_type
+        })
+
+
+def _validate_existing_file(file_path: Path, content_type: str) -> bool:
+    """Validate an existing file to determine if re-download is needed."""
+    try:
+        file_size = file_path.stat().st_size
+        
+        # Empty files are always invalid
+        if file_size == 0:
+            return False
+        
+        # Media files need special validation
+        if content_type in ['video', 'audio'] and file_path.suffix.lower() in ['.mp4', '.mp3', '.wav', '.m4a']:
+            return _validate_media_file_basic(file_path, file_size)
+        
+        # For other files, just check if they're readable
+        try:
+            with open(file_path, 'rb') as f:
+                f.read(1024)  # Try to read first 1KB
+            return True
+        except:
+            return False
+            
+    except Exception:
+        return False
+
+
+def _validate_media_file_basic(file_path: Path, file_size: int) -> bool:
+    """Basic validation for media files."""
+    try:
+        # Too small files are invalid
+        if file_size < 1024:
+            return False
+        
+        # Check file headers
+        with open(file_path, 'rb') as f:
+            header = f.read(16)
+            
+            # MP4 validation
+            if file_path.suffix.lower() == '.mp4':
+                if not (b'ftyp' in header or b'mdat' in header[:8]):
+                    return False
+            
+            # Check if we can read the end (complete file)
+            try:
+                f.seek(-min(512, file_size), 2)
+                f.read(512)
+            except:
+                return False
+        
+        return True
+        
+    except Exception:
+        return False
 
 
 def execute_parallel_downloads() -> int:
@@ -261,9 +354,9 @@ def collect_all_download_tasks(data: Dict[str, Any], analyzed_chapters = None, c
                 task_data = []
                 for task in DOWNLOAD_TASKS:
                     task_data.append({
-                        'url': task.url,
-                        'dest_path': str(task.dest_path),
-                        'content_type': getattr(task, 'content_type', 'video')
+                        'url': task['url'],
+                        'dest_path': str(task['dest_path']),
+                        'content_type': task.get('content_type', 'video')
                     })
                 
                 with open(cache_file, 'w', encoding='utf-8') as f:

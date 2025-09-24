@@ -30,10 +30,21 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **🧠 Smart File Validation** - Automatic integrity checking and corruption detection
 - **▶️ Resume Downloads** - Intelligent partial download recovery and continuation
 - **⏭️ Skip Existing Files** - Automatic detection and skipping of completed downloads
+- **💾 Atomic Resume/Backup System** - Cross-platform safe status tracking and backup (Windows, Mac, Linux)
 
 ### 🎯 **Progress Monitoring**
+#### Example Progress UI
 ```
-💾 introduction.mp4 ████████████████████████████ 100% 156.2MB • 12.3MB/s • Complete
+� Resume Status Summary
+	✅ 5 files already completed
+	📥 2 files partially downloaded (will resume)
+	❌ 1 files previously failed (will retry)
+
+📁 Files to download: 31
+🔄 Parallel workers: 3
+⚡ Enhanced features: Rate limiting, Resume, Validation
+
+🎥 welcome-video.mp4 ████████████████████████████ 100% 156.2MB • 12.3MB/s • Complete
 🔄 lesson-02.mp4 ████████████░░░░░░░░░░░░░░░░ 45% 89.1MB/198.4MB • 8.7MB/s • 0:00:12
 ⏳ lesson-03.pdf ░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0% Queued
 ```
@@ -69,6 +80,7 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **Rich Terminal Interface** - Beautiful progress bars and status updates
 - **Smart File Organization** - Logical folder structure with clean naming
 - **Resume Support** - Skip existing files, continue interrupted downloads
+- **Atomic Resume/Backup** - Status file is always safely backed up and updated, works on Windows, Mac, Linux
 - **Multiple Quality Options** - Choose video quality (720p, 1080p, etc.)
 - **Comprehensive Logging** - Debug mode for troubleshooting
 
@@ -77,6 +89,7 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **Session Management** - Proper authentication handling
 - **Error Recovery** - Graceful handling of network issues
 - **Validation** - File integrity checks and cleanup
+- **Atomic Status File** - Download status is always saved safely, with backup, for reliable resume
 
 ## 🎯 **Quick Start**
 
@@ -98,6 +111,12 @@ pip install -r requirements.txt
 python thinkidownloader3.py
 
 ```
+
+> **Resume/Backup System:**
+> - Download status is tracked in `.download_status.json` (atomic, cross-platform)
+> - A backup `.download_status.json.bak` is created automatically before each update
+> - If interrupted, simply rerun the downloader to resume from where you left off
+> - Works seamlessly on Windows, Mac, and Linux
 
 > 📖 **Need detailed setup instructions?** Check out our comprehensive [**SETUP.md**](SETUP.md) guide for step-by-step installation, troubleshooting, and configuration options.
 
@@ -182,7 +201,22 @@ docker-compose up
 | **Quizzes** | `.json` | Structure export | Question/answer format |
 
 ## ❓ **FAQ**
+### **Resume/Backup System**
 
+**Q: How does resume work?**
+- The downloader automatically tracks download status in `.download_status.json`.
+- Before updating, a backup `.download_status.json.bak` is created (atomic, safe).
+- If interrupted, just rerun the downloader. It will resume partial downloads, skip completed files, and retry failed ones.
+- No manual intervention needed.
+
+**Q: Is it safe on Windows, Mac, Linux?**
+- Yes! The resume/backup system uses atomic file operations and works on all major platforms.
+
+**Q: Where is the status file stored?**
+- In the current working directory (where you run the downloader).
+
+**Q: Can I delete the status file?**
+- Yes, but you will lose resume progress. The backup file is for safety only.
 ### **🔐 Authentication & Setup**
 
 **Q: How do I get the required authentication data?**
