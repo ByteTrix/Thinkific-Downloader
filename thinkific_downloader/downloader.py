@@ -425,17 +425,14 @@ def _restore_saved_tasks(saved_tasks: List[Dict[str, Any]]):
         return
 
     restored_tasks = saved_tasks
-    if SETTINGS and hasattr(SETTINGS, 'subtitle_download_enabled') and not SETTINGS.subtitle_download_enabled:
-        filtered_tasks: List[Dict[str, Any]] = []
-        skipped_count = 0
-        for task in saved_tasks:
-            content_type = (task.get('content_type') or 'video').lower()
-            if content_type == 'subtitle':
-                skipped_count += 1
-                continue
-            filtered_tasks.append(task)
-        restored_tasks = filtered_tasks
-        if skipped_count:
+    if SETTINGS and not SETTINGS.subtitle_download_enabled:
+        all_tasks_count = len(restored_tasks)
+        restored_tasks = [
+            task for task in restored_tasks
+            if (task.get('content_type') or 'video').lower() != 'subtitle'
+        ]
+        skipped_count = all_tasks_count - len(restored_tasks)
+        if skipped_count > 0:
             print(f"⏭️  Skipping {skipped_count} cached subtitle task(s) because subtitle downloads are disabled.")
 
     if not restored_tasks:
