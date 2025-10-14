@@ -449,9 +449,23 @@ def init_course(data: Dict[str, Any]):
     
     # Restore saved download tasks
     if saved_tasks:
-        print(f"📥 Restoring {len(saved_tasks)} previously collected download tasks...")
-        for task_data in saved_tasks:
-            add_download_task(task_data['url'], Path(task_data['dest_path']), task_data.get('content_type', 'video'))
+        restored_tasks = saved_tasks
+        if SETTINGS and hasattr(SETTINGS, 'subtitle_download_enabled') and not SETTINGS.subtitle_download_enabled:
+            filtered_tasks = []
+            skipped_count = 0
+            for task in saved_tasks:
+                content_type = (task.get('content_type') or 'video').lower()
+                if content_type == 'subtitle':
+                    skipped_count += 1
+                    continue
+                filtered_tasks.append(task)
+            restored_tasks = filtered_tasks
+            if skipped_count:
+                print(f"⏭️  Skipping {skipped_count} cached subtitle task(s) because subtitle downloads are disabled.")
+        if restored_tasks:
+            print(f"📥 Restoring {len(restored_tasks)} previously collected download tasks...")
+            for task_data in restored_tasks:
+                add_download_task(task_data['url'], Path(task_data['dest_path']), task_data.get('content_type', 'video'))
     
     collect_all_download_tasks(data, analyzed_chapters, cache_file)
     
