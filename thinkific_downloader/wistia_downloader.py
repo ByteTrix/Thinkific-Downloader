@@ -3,7 +3,7 @@ import os
 import re
 import zlib
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 from urllib.parse import urlparse
 
 import requests
@@ -90,47 +90,45 @@ def extract_wistia_subtitle_tracks(media: Dict[str, Any]) -> List[Dict[str, Opti
                 track.get('ext')
             )
 
-    for track in media.get('text_tracks') or []:
-        if not isinstance(track, dict):
-            continue
-        sources = track.get('sources') or []
-        if sources:
-            for source in sources:
-                if isinstance(source, dict):
-                    add_track(
-                        source.get('url') or source.get('src'),
-                        track.get('language') or track.get('lang'),
-                        track.get('name') or track.get('label'),
-                        source.get('ext') or track.get('ext')
-                    )
-        else:
-            add_track(
-                track.get('url') or track.get('src'),
-                track.get('language') or track.get('lang'),
-                track.get('name') or track.get('label'),
-                track.get('ext')
-            )
+    def process_track_collection(collection: Optional[Iterable[Dict[str, Any]]], label_keys: Iterable[str]):
+        if not collection:
+            return
 
-    for track in media.get('textTracks') or []:
-        if not isinstance(track, dict):
-            continue
-        sources = track.get('sources') or []
-        if sources:
-            for source in sources:
-                if isinstance(source, dict):
+        def _get_label(track_dict: Dict[str, Any]) -> Optional[str]:
+            for key in label_keys:
+                value = track_dict.get(key)
+                if value:
+                    return value
+            return None
+
+        for track in collection:
+            if not isinstance(track, dict):
+                continue
+
+            language = track.get('language') or track.get('lang')
+            label = _get_label(track)
+            sources = track.get('sources') or []
+
+            if sources:
+                for source in sources:
+                    if not isinstance(source, dict):
+                        continue
                     add_track(
                         source.get('url') or source.get('src'),
-                        track.get('language') or track.get('lang'),
-                        track.get('name') or track.get('label') or track.get('title'),
+                        language,
+                        label,
                         source.get('ext') or track.get('ext')
                     )
-        else:
-            add_track(
-                track.get('url') or track.get('src'),
-                track.get('language') or track.get('lang'),
-                track.get('name') or track.get('label') or track.get('title'),
-                track.get('ext')
-            )
+            else:
+                add_track(
+                    track.get('url') or track.get('src'),
+                    language,
+                    label,
+                    track.get('ext')
+                )
+
+    process_track_collection(media.get('text_tracks'), ('name', 'label'))
+    process_track_collection(media.get('textTracks'), ('name', 'label', 'title'))
 
     for asset in media.get('assets') or []:
         if isinstance(asset, dict):
