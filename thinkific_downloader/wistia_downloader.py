@@ -90,42 +90,33 @@ def extract_wistia_subtitle_tracks(media: Dict[str, Any]) -> List[Dict[str, Opti
                 track.get('ext')
             )
 
-    def process_track_collection(collection: Optional[Iterable[Dict[str, Any]]], label_keys: Iterable[str]):
-        if not collection:
+    def iter_track_dicts(collection: Optional[Iterable[Dict[str, Any]]]):
+        for item in collection or []:
+            if isinstance(item, dict):
+                yield item
+
+    def extract_label(track_dict: Dict[str, Any], label_keys: Iterable[str]) -> Optional[str]:
+        for key in label_keys:
+            value = track_dict.get(key)
+            if value:
+                return value
+        return None
+
+    def iter_track_sources(track_dict: Dict[str, Any]):
+        sources = track_dict.get('sources') or []
+        if not sources:
+            yield track_dict.get('url') or track_dict.get('src'), track_dict.get('ext')
             return
+        for source in sources:
+            if isinstance(source, dict):
+                yield source.get('url') or source.get('src'), source.get('ext') or track_dict.get('ext')
 
-        def _get_label(track_dict: Dict[str, Any]) -> Optional[str]:
-            for key in label_keys:
-                value = track_dict.get(key)
-                if value:
-                    return value
-            return None
-
-        for track in collection:
-            if not isinstance(track, dict):
-                continue
-
+    def process_track_collection(collection: Optional[Iterable[Dict[str, Any]]], label_keys: Iterable[str]):
+        for track in iter_track_dicts(collection):
             language = track.get('language') or track.get('lang')
-            label = _get_label(track)
-            sources = track.get('sources') or []
-
-            if sources:
-                for source in sources:
-                    if not isinstance(source, dict):
-                        continue
-                    add_track(
-                        source.get('url') or source.get('src'),
-                        language,
-                        label,
-                        source.get('ext') or track.get('ext')
-                    )
-            else:
-                add_track(
-                    track.get('url') or track.get('src'),
-                    language,
-                    label,
-                    track.get('ext')
-                )
+            label = extract_label(track, label_keys)
+            for source_url, source_ext in iter_track_sources(track):
+                add_track(source_url, language, label, source_ext)
 
     process_track_collection(media.get('text_tracks'), ('name', 'label'))
     process_track_collection(media.get('textTracks'), ('name', 'label', 'title'))
