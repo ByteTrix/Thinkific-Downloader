@@ -410,8 +410,8 @@ def _load_cached_progress(cache_file: Path):
                 saved_tasks = []
                 try:
                     cache_file.unlink()
-                except OSError:
-                    pass
+                except OSError as e:
+                    print(f"   ⚠️  Warning: Failed to delete cache file for refresh: {e}")
     except (json.JSONDecodeError, OSError):
         analyzed_chapters = set()
         saved_tasks = []
