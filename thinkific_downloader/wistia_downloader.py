@@ -125,7 +125,7 @@ def extract_wistia_subtitle_tracks(media: Dict[str, Any]) -> List[Dict[str, Opti
         if isinstance(asset, dict):
             asset_type = (asset.get('type') or '').lower()
             asset_kind = (asset.get('kind') or '').lower()
-            if asset_type in ('caption', 'captions', 'subtitle', 'subtitles') or asset_kind in ('caption', 'captions', 'subtitle', 'subtitles'):
+            if asset_type in {'caption', 'captions', 'subtitle', 'subtitles'} or asset_kind in {'caption', 'captions', 'subtitle', 'subtitles'}:
                 add_track(
                     asset.get('url') or asset.get('src'),
                     asset.get('language') or asset.get('lang'),
