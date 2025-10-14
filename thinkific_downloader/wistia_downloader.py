@@ -55,7 +55,7 @@ def _infer_track_extension(url: str, fallback: str = DEFAULT_SUBTITLE_EXTENSION)
         suffix = Path(parsed.path).suffix
         if suffix:
             return suffix.lstrip('.').lower() or fallback
-    except Exception:
+    except (AttributeError, TypeError):
         pass
     return fallback
 
