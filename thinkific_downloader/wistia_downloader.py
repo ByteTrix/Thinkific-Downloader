@@ -81,8 +81,10 @@ def extract_wistia_subtitle_tracks(media: Dict[str, Any]) -> List[Dict[str, Opti
             'ext': (ext or '').lstrip('.') or None
         })
 
-    for track in media.get('captions') or []:
-        if isinstance(track, dict):
+    def collect_from_captions(caption_items: Optional[Iterable[Dict[str, Any]]]):
+        for track in caption_items or []:
+            if not isinstance(track, dict):
+                continue
             add_track(
                 track.get('url') or track.get('src'),
                 track.get('language') or track.get('lang'),
@@ -90,42 +92,40 @@ def extract_wistia_subtitle_tracks(media: Dict[str, Any]) -> List[Dict[str, Opti
                 track.get('ext')
             )
 
-    def iter_track_dicts(collection: Optional[Iterable[Dict[str, Any]]]):
-        for item in collection or []:
-            if isinstance(item, dict):
-                yield item
-
-    def extract_label(track_dict: Dict[str, Any], label_keys: Iterable[str]) -> Optional[str]:
-        for key in label_keys:
-            value = track_dict.get(key)
-            if value:
-                return value
-        return None
-
-    def iter_track_sources(track_dict: Dict[str, Any]):
-        sources = track_dict.get('sources') or []
-        if not sources:
-            yield track_dict.get('url') or track_dict.get('src'), track_dict.get('ext')
-            return
-        for source in sources:
-            if isinstance(source, dict):
-                yield source.get('url') or source.get('src'), source.get('ext') or track_dict.get('ext')
-
-    def process_track_collection(collection: Optional[Iterable[Dict[str, Any]]], label_keys: Iterable[str]):
-        for track in iter_track_dicts(collection):
+    def collect_from_text_tracks(track_items: Optional[Iterable[Dict[str, Any]]], label_keys: Iterable[str]):
+        label_key_order = tuple(label_keys)
+        for track in track_items or []:
+            if not isinstance(track, dict):
+                continue
             language = track.get('language') or track.get('lang')
-            label = extract_label(track, label_keys)
-            for source_url, source_ext in iter_track_sources(track):
-                add_track(source_url, language, label, source_ext)
+            label = next((track.get(key) for key in label_key_order if track.get(key)), None)
+            sources = track.get('sources') or []
+            if sources:
+                for source in sources:
+                    if not isinstance(source, dict):
+                        continue
+                    add_track(
+                        source.get('url') or source.get('src'),
+                        language,
+                        label,
+                        source.get('ext') or track.get('ext')
+                    )
+            else:
+                add_track(
+                    track.get('url') or track.get('src'),
+                    language,
+                    label,
+                    track.get('ext')
+                )
 
-    process_track_collection(media.get('text_tracks'), ('name', 'label'))
-    process_track_collection(media.get('textTracks'), ('name', 'label', 'title'))
-
-    for asset in media.get('assets') or []:
-        if isinstance(asset, dict):
+    def collect_from_assets(asset_items: Optional[Iterable[Dict[str, Any]]]):
+        subtitle_flags = {'caption', 'captions', 'subtitle', 'subtitles'}
+        for asset in asset_items or []:
+            if not isinstance(asset, dict):
+                continue
             asset_type = (asset.get('type') or '').lower()
             asset_kind = (asset.get('kind') or '').lower()
-            if asset_type in {'caption', 'captions', 'subtitle', 'subtitles'} or asset_kind in {'caption', 'captions', 'subtitle', 'subtitles'}:
+            if asset_type in subtitle_flags or asset_kind in subtitle_flags:
                 add_track(
                     asset.get('url') or asset.get('src'),
                     asset.get('language') or asset.get('lang'),
@@ -133,12 +133,17 @@ def extract_wistia_subtitle_tracks(media: Dict[str, Any]) -> List[Dict[str, Opti
                     asset.get('ext')
                 )
 
-    available_transcripts = media.get('availableTranscripts') or []
-    if hashed_id and available_transcripts:
-        for transcript in available_transcripts:
+    def collect_from_transcripts(transcripts: Optional[Iterable[Dict[str, Any]]]):
+        if not hashed_id:
+            return
+        for transcript in transcripts or []:
             if not isinstance(transcript, dict) or not transcript.get('hasCaptions'):
                 continue
-            language = transcript.get('language') or transcript.get('wistiaLanguageCode') or transcript.get('bcp47LanguageTag')
+            language = (
+                transcript.get('language')
+                or transcript.get('wistiaLanguageCode')
+                or transcript.get('bcp47LanguageTag')
+            )
             if not language:
                 continue
             add_track(
@@ -147,6 +152,12 @@ def extract_wistia_subtitle_tracks(media: Dict[str, Any]) -> List[Dict[str, Opti
                 transcript.get('name') or transcript.get('familyName') or language,
                 DEFAULT_SUBTITLE_EXTENSION
             )
+
+    collect_from_captions(media.get('captions'))
+    collect_from_text_tracks(media.get('text_tracks'), ('name', 'label'))
+    collect_from_text_tracks(media.get('textTracks'), ('name', 'label', 'title'))
+    collect_from_assets(media.get('assets'))
+    collect_from_transcripts(media.get('availableTranscripts'))
 
     unique_tracks: Dict[str, Dict[str, Optional[str]]] = {}
     for track in tracks:
@@ -168,21 +179,22 @@ def extract_wistia_subtitle_tracks(media: Dict[str, Any]) -> List[Dict[str, Opti
     return list(unique_tracks.values())
 
 
-def queue_wistia_subtitle_downloads(media: Dict[str, Any], dest_dir: Path, video_base_name: str):
-    """Queue subtitle download tasks for a Wistia media object."""
-    from .downloader import SETTINGS, add_download_task, init_settings
-
+def build_wistia_subtitle_tasks(
+    media: Dict[str, Any],
+    dest_dir: Path,
+    video_base_name: str,
+    settings: Optional[Any] = None,
+) -> List[Dict[str, Any]]:
+    """Construct subtitle download task dicts for a Wistia media object."""
     if not isinstance(dest_dir, Path):
         dest_dir = Path(dest_dir)
 
-    init_settings()
-    settings = SETTINGS
-    if settings and hasattr(settings, 'subtitle_download_enabled') and not settings.subtitle_download_enabled:
-        return
+    if settings and not getattr(settings, 'subtitle_download_enabled', True):
+        return []
 
     tracks = extract_wistia_subtitle_tracks(media)
     if not tracks:
-        return
+        return []
 
     base_name = Path(video_base_name).stem
     if not base_name:
@@ -194,6 +206,7 @@ def queue_wistia_subtitle_downloads(media: Dict[str, Any], dest_dir: Path, video
     if not base_name:
         base_name = "captions"
 
+    tasks: List[Dict[str, Any]] = []
     counter = 1
     for track in tracks:
         url = track.get('url')
@@ -201,11 +214,11 @@ def queue_wistia_subtitle_downloads(media: Dict[str, Any], dest_dir: Path, video
             continue
 
         ext = (track.get('ext') or _infer_track_extension(url)).lstrip('.').lower() or DEFAULT_SUBTITLE_EXTENSION
-        language_part = track.get('language') or track.get('label') or ''
-        if isinstance(language_part, (list, dict)):
+        language_raw = track.get('language') or track.get('label')
+        if isinstance(language_raw, str):
+            language_part = _LANGUAGE_SANITIZE_PATTERN.sub('-', language_raw).strip('-')
+        else:
             language_part = ''
-        language_part = str(language_part or '')
-        language_part = _LANGUAGE_SANITIZE_PATTERN.sub('-', language_part).strip('-')
 
         if not language_part:
             language_part = 'captions' if counter == 1 else f"captions-{counter}"
@@ -214,9 +227,16 @@ def queue_wistia_subtitle_downloads(media: Dict[str, Any], dest_dir: Path, video
         if not subtitle_filename:
             subtitle_filename = filter_filename(f"{base_name}.captions-{counter}.{ext}")
 
-        print(f"   [Subs] Queued subtitles: {subtitle_filename}")
-        add_download_task(url, dest_dir / subtitle_filename, "subtitle")
+        tasks.append({
+            'url': url,
+            'dest_path': dest_dir / subtitle_filename,
+            'content_type': 'subtitle',
+            'label': track.get('label'),
+            'language': track.get('language'),
+        })
         counter += 1
+
+    return tasks
 
 
 def video_downloader_videoproxy(video_url: str, file_name: str, quality: str = "720p"):
@@ -376,7 +396,11 @@ def video_downloader_wistia(wistia_id: str, file_name: Optional[str] = None, qua
                 DOWNLOAD_MANAGER.download_file(a_url, Path(filter_filename(out_name)))
             else:
                 print("Download manager not initialized")
-        queue_wistia_subtitle_downloads(media, current_dir, resolved_base)
+        from .downloader import SETTINGS, add_download_task
+        subtitle_tasks = build_wistia_subtitle_tasks(media, current_dir, resolved_base, SETTINGS)
+        for task in subtitle_tasks:
+            print(f"   [Subs] Queued subtitles: {task['dest_path'].name}")
+            add_download_task(task['url'], task['dest_path'], task.get('content_type', 'subtitle'))
         return
 
     # Single quality path
@@ -404,7 +428,10 @@ def video_downloader_wistia(wistia_id: str, file_name: Optional[str] = None, qua
     print(f"URL : {video_url}\nFile Name : {resolved_name}")
     
     # Queue video for parallel download with absolute path to current directory
-    from .downloader import add_download_task
+    from .downloader import SETTINGS, add_download_task
     full_path = current_dir / resolved_name  # Create absolute path
     add_download_task(video_url, full_path, "video")
-    queue_wistia_subtitle_downloads(media, current_dir, resolved_name)
+    subtitle_tasks = build_wistia_subtitle_tasks(media, current_dir, resolved_name, SETTINGS)
+    for task in subtitle_tasks:
+        print(f"   [Subs] Queued subtitles: {task['dest_path'].name}")
+        add_download_task(task['url'], task['dest_path'], task.get('content_type', 'subtitle'))

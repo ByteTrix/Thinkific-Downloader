@@ -892,8 +892,16 @@ def collect_video_task_wistia(wistia_id: str, file_name: str, dest_dir: Path):
                 print(f"   📹 Found video: {resolved_name}")
                 add_download_task(video_url, dest_dir / resolved_name, "video")
                 try:
-                    from .wistia_downloader import queue_wistia_subtitle_downloads
-                    queue_wistia_subtitle_downloads(data.get('media') or {}, dest_dir, resolved_name)
+                    from .wistia_downloader import build_wistia_subtitle_tasks
+                    subtitle_tasks = build_wistia_subtitle_tasks(
+                        data.get('media') or {},
+                        dest_dir,
+                        resolved_name,
+                        SETTINGS,
+                    )
+                    for task in subtitle_tasks:
+                        print(f"   [Subs] Queued subtitles: {Path(task['dest_path']).name}")
+                        add_download_task(task['url'], Path(task['dest_path']), task.get('content_type', 'subtitle'))
                 except Exception as subtitle_error:
                     print(f"   ⚠️  Unable to queue subtitles for {resolved_name}: {subtitle_error}")
     except Exception as e:
