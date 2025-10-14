@@ -382,6 +382,70 @@ def download_file_chunked(src_url: str, dst_name: str, chunk_mb: int = 1):
     add_download_task(src_url, dst_path, "file")
 
 
+def _load_cached_progress(cache_file: Path):
+    """Return previously analyzed chapters and queued tasks from the resume cache."""
+    analyzed_chapters = set()
+    saved_tasks: List[Dict[str, Any]] = []
+
+    if not cache_file.exists():
+        return analyzed_chapters, saved_tasks
+
+    try:
+        with open(cache_file, 'r', encoding='utf-8') as f:
+            cache_data = json.load(f)
+
+        analyzed_chapters = set(cache_data.get('analyzed_chapters', []))
+        saved_tasks = cache_data.get('download_tasks', [])
+        print(f"📋 Found previous progress: {len(analyzed_chapters)} chapters analyzed, {len(saved_tasks)} tasks cached")
+
+        # If subtitle downloads were newly enabled, invalidate cache so we can regenerate tasks.
+        if SETTINGS and SETTINGS.subtitle_download_enabled and saved_tasks:
+            has_subtitle_tasks = any(
+                (task.get('content_type') or '').lower() == 'subtitle'
+                for task in saved_tasks
+            )
+            if not has_subtitle_tasks:
+                print("🆕 Subtitle support enabled — refreshing cached analysis to include captions.")
+                analyzed_chapters = set()
+                saved_tasks = []
+                try:
+                    cache_file.unlink()
+                except OSError:
+                    pass
+    except (json.JSONDecodeError, OSError):
+        analyzed_chapters = set()
+        saved_tasks = []
+
+    return analyzed_chapters, saved_tasks
+
+
+def _restore_saved_tasks(saved_tasks: List[Dict[str, Any]]):
+    """Restore cached download tasks, respecting the subtitle feature flag."""
+    if not saved_tasks:
+        return
+
+    restored_tasks = saved_tasks
+    if SETTINGS and hasattr(SETTINGS, 'subtitle_download_enabled') and not SETTINGS.subtitle_download_enabled:
+        filtered_tasks: List[Dict[str, Any]] = []
+        skipped_count = 0
+        for task in saved_tasks:
+            content_type = (task.get('content_type') or 'video').lower()
+            if content_type == 'subtitle':
+                skipped_count += 1
+                continue
+            filtered_tasks.append(task)
+        restored_tasks = filtered_tasks
+        if skipped_count:
+            print(f"⏭️  Skipping {skipped_count} cached subtitle task(s) because subtitle downloads are disabled.")
+
+    if not restored_tasks:
+        return
+
+    print(f"📥 Restoring {len(restored_tasks)} previously collected download tasks...")
+    for task_data in restored_tasks:
+        add_download_task(task_data['url'], Path(task_data['dest_path']), task_data.get('content_type', 'video'))
+
+
 
 def init_course(data: Dict[str, Any]):
     """Initialize course structure and collect ALL download tasks first."""
@@ -412,32 +476,7 @@ def init_course(data: Dict[str, Any]):
     analyzed_chapters = set()
     saved_tasks = []
     
-    if cache_file.exists():
-        try:
-            import json
-            with open(cache_file, 'r', encoding='utf-8') as f:
-                cache_data = json.load(f)
-                analyzed_chapters = set(cache_data.get('analyzed_chapters', []))
-                saved_tasks = cache_data.get('download_tasks', [])
-                print(f"📋 Found previous progress: {len(analyzed_chapters)} chapters analyzed, {len(saved_tasks)} tasks cached")
-                # If subtitle downloads are enabled but cached tasks do not contain subtitles,
-                # treat cache as outdated so we can regenerate tasks with captions.
-                if SETTINGS and SETTINGS.subtitle_download_enabled and saved_tasks:
-                    has_subtitle_tasks = any(
-                        (task.get('content_type') or '').lower() == 'subtitle'
-                        for task in saved_tasks
-                    )
-                    if not has_subtitle_tasks:
-                        print("🆕 Subtitle support enabled — refreshing cached analysis to include captions.")
-                        analyzed_chapters = set()
-                        saved_tasks = []
-                        try:
-                            cache_file.unlink()
-                        except OSError:
-                            pass
-        except (json.JSONDecodeError, OSError):
-            analyzed_chapters = set()
-            saved_tasks = []
+    analyzed_chapters, saved_tasks = _load_cached_progress(cache_file)
     
     # Derive base host from landing_page_url if available
     landing = data['course'].get('landing_page_url')
@@ -448,24 +487,7 @@ def init_course(data: Dict[str, Any]):
     print("\n🔍 Phase 1: Analyzing course content and collecting download links...")
     
     # Restore saved download tasks
-    if saved_tasks:
-        restored_tasks = saved_tasks
-        if SETTINGS and hasattr(SETTINGS, 'subtitle_download_enabled') and not SETTINGS.subtitle_download_enabled:
-            filtered_tasks = []
-            skipped_count = 0
-            for task in saved_tasks:
-                content_type = (task.get('content_type') or 'video').lower()
-                if content_type == 'subtitle':
-                    skipped_count += 1
-                    continue
-                filtered_tasks.append(task)
-            restored_tasks = filtered_tasks
-            if skipped_count:
-                print(f"⏭️  Skipping {skipped_count} cached subtitle task(s) because subtitle downloads are disabled.")
-        if restored_tasks:
-            print(f"📥 Restoring {len(restored_tasks)} previously collected download tasks...")
-            for task_data in restored_tasks:
-                add_download_task(task_data['url'], Path(task_data['dest_path']), task_data.get('content_type', 'video'))
+    _restore_saved_tasks(saved_tasks)
     
     collect_all_download_tasks(data, analyzed_chapters, cache_file)
     
