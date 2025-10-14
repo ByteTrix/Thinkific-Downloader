@@ -435,7 +435,7 @@ def init_course(data: Dict[str, Any]):
                             cache_file.unlink()
                         except Exception:
                             pass
-        except:
+        except (json.JSONDecodeError, OSError):
             analyzed_chapters = set()
             saved_tasks = []
     
