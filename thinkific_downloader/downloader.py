@@ -386,6 +386,9 @@ def download_file_chunked(src_url: str, dst_name: str, chunk_mb: int = 1):
 def init_course(data: Dict[str, Any]):
     """Initialize course structure and collect ALL download tasks first."""
     global COURSE_CONTENTS, ROOT_PROJECT_DIR, BASE_HOST, DOWNLOAD_TASKS
+
+    # Ensure settings/download manager are initialized so feature flags are available
+    init_settings()
     
     # Initialize download tasks list
     DOWNLOAD_TASKS = []
@@ -417,6 +420,21 @@ def init_course(data: Dict[str, Any]):
                 analyzed_chapters = set(cache_data.get('analyzed_chapters', []))
                 saved_tasks = cache_data.get('download_tasks', [])
                 print(f"📋 Found previous progress: {len(analyzed_chapters)} chapters analyzed, {len(saved_tasks)} tasks cached")
+                # If subtitle downloads are enabled but cached tasks do not contain subtitles,
+                # treat cache as outdated so we can regenerate tasks with captions.
+                if SETTINGS and SETTINGS.subtitle_download_enabled and saved_tasks:
+                    has_subtitle_tasks = any(
+                        (task.get('content_type') or '').lower() == 'subtitle'
+                        for task in saved_tasks
+                    )
+                    if not has_subtitle_tasks:
+                        print("🆕 Subtitle support enabled — refreshing cached analysis to include captions.")
+                        analyzed_chapters = set()
+                        saved_tasks = []
+                        try:
+                            cache_file.unlink()
+                        except Exception:
+                            pass
         except:
             analyzed_chapters = set()
             saved_tasks = []
@@ -835,9 +853,16 @@ def collect_video_task_wistia(wistia_id: str, file_name: str, dest_dir: Path):
             video_url = selected.get('url')
             if video_url:
                 ext = '.mp4'  # Default extension
-                resolved_name = filter_filename(file_name) + ext
+                resolved_name = filter_filename(file_name)
+                if not resolved_name.lower().endswith(ext):
+                    resolved_name += ext
                 print(f"   📹 Found video: {resolved_name}")
                 add_download_task(video_url, dest_dir / resolved_name, "video")
+                try:
+                    from .wistia_downloader import queue_wistia_subtitle_downloads
+                    queue_wistia_subtitle_downloads(data.get('media') or {}, dest_dir, resolved_name)
+                except Exception as subtitle_error:
+                    print(f"   ⚠️  Unable to queue subtitles for {resolved_name}: {subtitle_error}")
     except Exception as e:
         print(f"   ❌ Failed to collect Wistia video {wistia_id}: {e}")
 
