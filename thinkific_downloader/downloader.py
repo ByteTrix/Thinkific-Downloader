@@ -410,8 +410,8 @@ def _load_cached_progress(cache_file: Path):
                 saved_tasks = []
                 try:
                     cache_file.unlink()
-                except OSError as e:
-                    print(f"   ⚠️  Warning: Failed to delete cache file for refresh: {e}")
+                except OSError as exc:
+                    print(f"   ⚠️  Warning: Failed to delete cache file for refresh: {exc}")
     except (json.JSONDecodeError, OSError):
         analyzed_chapters = set()
         saved_tasks = []
@@ -424,14 +424,14 @@ def _restore_saved_tasks(saved_tasks: List[Dict[str, Any]]):
     if not saved_tasks:
         return
 
-    restored_tasks = saved_tasks
+    restored_tasks = list(saved_tasks)
     if SETTINGS and not SETTINGS.subtitle_download_enabled:
-        all_tasks_count = len(restored_tasks)
+        total_tasks = len(restored_tasks)
         restored_tasks = [
             task for task in restored_tasks
             if (task.get('content_type') or 'video').lower() != 'subtitle'
         ]
-        skipped_count = all_tasks_count - len(restored_tasks)
+        skipped_count = total_tasks - len(restored_tasks)
         if skipped_count > 0:
             print(f"⏭️  Skipping {skipped_count} cached subtitle task(s) because subtitle downloads are disabled.")
 
