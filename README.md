@@ -52,6 +52,7 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 | 📄 **HTML Content** | ✅ Full | `downloader.py` | Clean extraction, formatting |
 | 📚 **PDF Documents** | ✅ Full | `downloader.py` | Direct download, validation |
 | 🎵 **Audio Files** | ✅ Full | `downloader.py` | MP3, M4A support |
+| 📝 **Subtitles (Wistia)** | ✅ Full | `wistia_downloader.py` | Multi-language caption downloads |
 | 🎯 **Quizzes** | ✅ Basic | `downloader.py` | Structure extraction |
 | 🎨 **Presentations** | ✅ Full | FFmpeg merge | Multi-slide processing |
 
@@ -70,6 +71,7 @@ A modern, feature-rich Python utility to download courses from Thinkific platfor
 - **Resume Support** - Skip existing files, continue interrupted downloads
 - **Atomic Resume/Backup** - Status file is always safely backed up and updated, works on Windows, Mac, Linux
 - **Multiple Quality Options** - Choose video quality (720p, 1080p, etc.)
+- **Subtitle Downloads** - Automatically grab Wistia caption tracks in multiple languages
 - **Comprehensive Logging** - Debug mode for troubleshooting
 
 ### 🛡️ **Safety & Compliance**
@@ -201,6 +203,7 @@ RATE_LIMIT_MB_S=            # Rate limit in MB/s (empty = unlimited)
 VALIDATE_DOWNLOADS=true     # Enable file integrity validation
 RESUME_PARTIAL=true         # Enable resume for partial downloads
 DEBUG=false                 # Enable debug logging
+SUBTITLE_DOWNLOAD_ENABLED=true # Download subtitles/captions when available
 
 # ===============================================
 # ADVANCED SETTINGS

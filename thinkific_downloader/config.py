@@ -37,6 +37,7 @@ class Settings:
     resume_partial: bool = True
     debug: bool = False
     course_name: str = "Course"
+    subtitle_download_enabled: bool = True
 
     @classmethod
     def from_env(cls):
@@ -67,6 +68,7 @@ class Settings:
         validate_downloads = os.getenv('VALIDATE_DOWNLOADS', 'true').lower() in ('1', 'true', 'yes', 'on')
         resume_partial = os.getenv('RESUME_PARTIAL', 'true').lower() in ('1', 'true', 'yes', 'on')
         debug = os.getenv('DEBUG', 'false').lower() in ('1', 'true', 'yes', 'on')
+        subtitle_download_enabled = os.getenv('SUBTITLE_DOWNLOAD_ENABLED', 'true').lower() in ('1', 'true', 'yes', 'on')
         
         # Clean cookie data to remove Unicode characters that cause encoding issues
         if cookie_data:
@@ -101,5 +103,6 @@ class Settings:
             download_delay=download_delay,
             validate_downloads=validate_downloads,
             resume_partial=resume_partial,
-            debug=debug
+            debug=debug,
+            subtitle_download_enabled=subtitle_download_enabled
         )

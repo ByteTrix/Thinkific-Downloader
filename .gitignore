@@ -85,6 +85,9 @@ downloads/
 *.mkv
 ffmpeg.log
 
+# Allow HTML templates used by the offline site generator
+!thinkific_downloader/templates/*.html
+
 # But allow certain JSON files
 !package.json
 !requirements.json
