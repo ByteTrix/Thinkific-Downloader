@@ -12,6 +12,7 @@ Further CLI plumbing and richer client-side behaviour will be added in subsequen
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import shutil
@@ -22,7 +23,6 @@ from pathlib import Path
 from string import Template
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 from urllib.parse import quote
-import base64
 
 from .file_utils import filter_filename
 
