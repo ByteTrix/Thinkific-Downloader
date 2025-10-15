@@ -315,7 +315,6 @@ def _render_course(course: Course, output_dir: Path, *, clean: bool, assets_dirn
         course=course,
         lesson_template=lesson_template,
         output_dir=output_dir,
-        assets_dirname=assets_dirname,
     )
 
     course_payload = _build_course_payload(course)
@@ -397,7 +396,6 @@ def _render_lessons(
     course: Course,
     lesson_template: Template,
     output_dir: Path,
-    assets_dirname: str,
 ) -> Tuple[str, str]:
     """Render lesson templates and return (templates_html, initial_lesson_html)."""
     templates: List[str] = ['<div id="lesson-templates" hidden>']
@@ -409,7 +407,6 @@ def _render_lessons(
             lesson=lesson,
             template=lesson_template,
             output_dir=output_dir,
-            assets_dirname=assets_dirname,
         )
         templates.append(
             f'<template id="lesson-template-{lesson.id}">{lesson_html}</template>'
@@ -421,7 +418,7 @@ def _render_lessons(
     return "\n".join(templates), initial_html
 
 
-def _render_lesson(lesson: Lesson, template: Template, output_dir: Path, assets_dirname: str) -> str:
+def _render_lesson(lesson: Lesson, template: Template, output_dir: Path) -> str:
     """Render a single lesson section."""
     body_html = _render_lesson_body(lesson, output_dir)
     attachments_html = _render_attachments(lesson, output_dir)
