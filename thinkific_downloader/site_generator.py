@@ -22,6 +22,7 @@ from pathlib import Path
 from string import Template
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 from urllib.parse import quote
+import base64
 
 from .file_utils import filter_filename
 
@@ -455,10 +456,12 @@ def _render_lesson_body(lesson: Lesson, output_dir: Path) -> str:
             video_sources.append(f'<source src="{rel_url}" type="video/mp4">')
 
         caption_tracks = []
-        for caption in lesson.assets.captions:
+        for idx, caption in enumerate(lesson.assets.captions):
             srclang, label = _guess_caption_language(caption)
+            default_attr = " default" if idx == 0 else ""
+            caption_src = _build_caption_data_uri(caption)
             caption_tracks.append(
-                f'<track src="{_relative_url(caption, output_dir)}" kind="subtitles" srclang="{srclang}" label="{label}">'
+                f'<track src="{caption_src}" kind="subtitles" srclang="{srclang}" label="{label}"{default_attr}>'
             )
 
         return (
@@ -649,8 +652,63 @@ def _guess_caption_language(path: Path) -> Tuple[str, str]:
     else:
         lang = "en"
     lang = lang.lower()
-    label = lang.upper()
+
+    canonical = _map_language_code(lang)
+    label = canonical.upper()
+    lang = canonical
+
     return lang, label
+
+
+def _map_language_code(lang: str) -> str:
+    """Map common language fragments to two-letter ISO codes."""
+    language_map = {
+        "eng": "en",
+        "english": "en",
+        "en-us": "en",
+        "en-gb": "en",
+        "es": "es",
+        "spa": "es",
+        "spanish": "es",
+        "fr": "fr",
+        "fre": "fr",
+        "fra": "fr",
+        "french": "fr",
+        "de": "de",
+        "ger": "de",
+        "deu": "de",
+        "german": "de",
+        "it": "it",
+        "ita": "it",
+        "italian": "it",
+        "pt": "pt",
+        "por": "pt",
+        "pt-br": "pt",
+        "pt-pt": "pt",
+        "portuguese": "pt",
+        "ru": "ru",
+        "rus": "ru",
+        "russian": "ru",
+        "zh": "zh",
+        "chi": "zh",
+        "zho": "zh",
+        "chinese": "zh",
+    }
+
+    if lang in language_map:
+        return language_map[lang]
+    if len(lang) > 2:
+        return lang[:2]
+    if not lang:
+        return "en"
+    return lang
+
+
+def _build_caption_data_uri(path: Path) -> str:
+    """Embed caption file content into a data URI to avoid file:// origin issues."""
+    data = path.read_bytes()
+    encoded = base64.b64encode(data).decode("ascii")
+    return f"data:text/vtt;base64,{encoded}"
 
 
 def _format_duration(seconds: int | float) -> str:
