@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>$title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="$css_path">
+  </head>
+  <body>
+    <div class="viewer">
+      <aside class="sidebar">
+        <div class="course-header">
+          <h1 class="course-title">$title</h1>
+          $subtitle
+        </div>
+        $sidebar
+      </aside>
+      <main class="content-pane" id="lesson-container" tabindex="-1">
+        $initial_lesson
+      </main>
+    </div>
+    $lesson_templates
+    <script>
+      window.__COURSE_DATA__ = $course_json;
+    </script>
+    <script src="$js_path"></script>
+  </body>
+</html>
