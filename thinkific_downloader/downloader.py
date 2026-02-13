@@ -382,10 +382,74 @@ def download_file_chunked(src_url: str, dst_name: str, chunk_mb: int = 1):
     add_download_task(src_url, dst_path, "file")
 
 
+def _load_cached_progress(cache_file: Path):
+    """Return previously analyzed chapters and queued tasks from the resume cache."""
+    analyzed_chapters = set()
+    saved_tasks: List[Dict[str, Any]] = []
+
+    if not cache_file.exists():
+        return analyzed_chapters, saved_tasks
+
+    try:
+        with open(cache_file, 'r', encoding='utf-8') as f:
+            cache_data = json.load(f)
+
+        analyzed_chapters = set(cache_data.get('analyzed_chapters', []))
+        saved_tasks = cache_data.get('download_tasks', [])
+        print(f"📋 Found previous progress: {len(analyzed_chapters)} chapters analyzed, {len(saved_tasks)} tasks cached")
+
+        # If subtitle downloads were newly enabled, invalidate cache so we can regenerate tasks.
+        if SETTINGS and SETTINGS.subtitle_download_enabled and saved_tasks:
+            has_subtitle_tasks = any(
+                (task.get('content_type') or '').lower() == 'subtitle'
+                for task in saved_tasks
+            )
+            if not has_subtitle_tasks:
+                print("🆕 Subtitle support enabled — refreshing cached analysis to include captions.")
+                analyzed_chapters = set()
+                saved_tasks = []
+                try:
+                    cache_file.unlink()
+                except OSError as exc:
+                    print(f"   ⚠️  Warning: Failed to delete cache file for refresh: {exc}")
+    except (json.JSONDecodeError, OSError):
+        analyzed_chapters = set()
+        saved_tasks = []
+
+    return analyzed_chapters, saved_tasks
+
+
+def _restore_saved_tasks(saved_tasks: List[Dict[str, Any]]):
+    """Restore cached download tasks, respecting the subtitle feature flag."""
+    if not saved_tasks:
+        return
+
+    restored_tasks = list(saved_tasks)
+    if SETTINGS and not SETTINGS.subtitle_download_enabled:
+        total_tasks = len(restored_tasks)
+        restored_tasks = [
+            task for task in restored_tasks
+            if (task.get('content_type') or 'video').lower() != 'subtitle'
+        ]
+        skipped_count = total_tasks - len(restored_tasks)
+        if skipped_count > 0:
+            print(f"⏭️  Skipping {skipped_count} cached subtitle task(s) because subtitle downloads are disabled.")
+
+    if not restored_tasks:
+        return
+
+    print(f"📥 Restoring {len(restored_tasks)} previously collected download tasks...")
+    for task_data in restored_tasks:
+        add_download_task(task_data['url'], Path(task_data['dest_path']), task_data.get('content_type', 'video'))
+
+
 
 def init_course(data: Dict[str, Any]):
     """Initialize course structure and collect ALL download tasks first."""
     global COURSE_CONTENTS, ROOT_PROJECT_DIR, BASE_HOST, DOWNLOAD_TASKS
+
+    # Ensure settings/download manager are initialized so feature flags are available
+    init_settings()
     
     # Initialize download tasks list
     DOWNLOAD_TASKS = []
@@ -409,17 +473,7 @@ def init_course(data: Dict[str, Any]):
     analyzed_chapters = set()
     saved_tasks = []
     
-    if cache_file.exists():
-        try:
-            import json
-            with open(cache_file, 'r', encoding='utf-8') as f:
-                cache_data = json.load(f)
-                analyzed_chapters = set(cache_data.get('analyzed_chapters', []))
-                saved_tasks = cache_data.get('download_tasks', [])
-                print(f"📋 Found previous progress: {len(analyzed_chapters)} chapters analyzed, {len(saved_tasks)} tasks cached")
-        except:
-            analyzed_chapters = set()
-            saved_tasks = []
+    analyzed_chapters, saved_tasks = _load_cached_progress(cache_file)
     
     # Derive base host from landing_page_url if available
     landing = data['course'].get('landing_page_url')
@@ -430,10 +484,7 @@ def init_course(data: Dict[str, Any]):
     print("\n🔍 Phase 1: Analyzing course content and collecting download links...")
     
     # Restore saved download tasks
-    if saved_tasks:
-        print(f"📥 Restoring {len(saved_tasks)} previously collected download tasks...")
-        for task_data in saved_tasks:
-            add_download_task(task_data['url'], Path(task_data['dest_path']), task_data.get('content_type', 'video'))
+    _restore_saved_tasks(saved_tasks)
     
     collect_all_download_tasks(data, analyzed_chapters, cache_file)
     
@@ -835,9 +886,24 @@ def collect_video_task_wistia(wistia_id: str, file_name: str, dest_dir: Path):
             video_url = selected.get('url')
             if video_url:
                 ext = '.mp4'  # Default extension
-                resolved_name = filter_filename(file_name) + ext
+                resolved_name = filter_filename(file_name)
+                if not resolved_name.lower().endswith(ext):
+                    resolved_name += ext
                 print(f"   📹 Found video: {resolved_name}")
                 add_download_task(video_url, dest_dir / resolved_name, "video")
+                try:
+                    from .wistia_downloader import build_wistia_subtitle_tasks
+                    subtitle_tasks = build_wistia_subtitle_tasks(
+                        data.get('media') or {},
+                        dest_dir,
+                        resolved_name,
+                        SETTINGS,
+                    )
+                    for task in subtitle_tasks:
+                        print(f"   [Subs] Queued subtitles: {Path(task['dest_path']).name}")
+                        add_download_task(task['url'], Path(task['dest_path']), task.get('content_type', 'subtitle'))
+                except Exception as subtitle_error:
+                    print(f"   ⚠️  Unable to queue subtitles for {resolved_name}: {subtitle_error}")
     except Exception as e:
         print(f"   ❌ Failed to collect Wistia video {wistia_id}: {e}")
 
